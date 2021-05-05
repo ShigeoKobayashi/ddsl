@@ -24,32 +24,22 @@
 //   If it is not set on any variable,then
 //     SCORE(v)   ... Connected component no.,the v icluded. SCORE(v)==0 means v is not alive.
 //     NEXT(v)    ... Circular link that links every variables in the same connected component.
-//     T_COUNT(p) ... Total number of <T>s.
 //
 EXPORT(int) DdsSieveVariable(DDS_PROCESSOR ph)
 {
 	ENTER(ph);
-	int cv = VARIABLE_COUNT(p);
+	int cv = VARIABLE_COUNT();
+	bool retry = false;
 	STACK(cv+1);
 	{
 		// Check and copy user-flag to system-flag.
 		int ce = 0;
 		for (int i = 0; i < cv; ++i) {
-			SYS_FLAG(VARIABLE(p, i)) = USER_FLAG(VARIABLE(p, i)) & DDS_FLAG_MASK;
-			if(DdsCheckVariable(VARIABLE(p, i))) ++ce;
+			SYS_FLAG(VARIABLE(i)) = USER_FLAG(VARIABLE(i)) & DDS_FLAG_MASK;
+			if(DdsCheckVariable(VARIABLE(i))) ++ce;
 		}
 		if (ce > 0) THROW(DDS_ERROR_FLAG, DDS_MSG_FLAG);
 	}
-
-	// can back-track from <I> to <DE>.
-	auto  BACKWAY_COUNTI = [](DdsVariable* v) {
-		if (DDS_FLAG_OR(SYS_FLAG(v), DDS_FLAG_SET | DDS_SFLAG_FREE)) return 0;
-		return RHSV_COUNT(v);
-	};
-
-	auto  ENABLE_BACKTRACKI = [&p, &cv,&BACKWAY_COUNTI]() {
-		for (int jv = 0; jv < cv; ++jv) INDEX(VARIABLE(p, jv)) = BACKWAY_COUNTI(VARIABLE(p, jv));
-	};
 
 	auto MERGE = [](DdsVariable* v1, DdsVariable* v2) {
 		int s1 = SCORE(v1);
@@ -76,7 +66,7 @@ EXPORT(int) DdsSieveVariable(DDS_PROCESSOR ph)
 		int cr = 0; // <R> counter
 		int cf = 0; // <F> counter
 		for (int i = 0; i < cv; ++i) {
-			DdsVariable* pv = VARIABLE(p, i);
+			DdsVariable* pv = VARIABLE(i);
 			if (pv == nullptr) THROW(DDS_ERROR_NULL, DDS_MSG_NULL);
 			SCORE(pv) = 0;
 			if (RHSV_COUNT(pv) <= 0 && !IS_SET(pv)) {++cf; SET_SFLAG_ON(pv, DDS_SFLAG_FREE);}
@@ -87,33 +77,31 @@ EXPORT(int) DdsSieveVariable(DDS_PROCESSOR ph)
 			}
 		}
 		if (cr <= 0 ) THROW(DDS_ERROR_REQUIRED,  DDS_MSG_REQUIRED);
-		if (cf != ct) THROW(DDS_ERROR_FT_NUMBER, DDS_MSG_FT_NUMBER);
 	}
-	T_COUNT(p) = 0;
 	if (ct > 0) {
 		// ** Make <F>-T<> circular link. **
 		//    NEXT(v):Any variable,except starting <T>, on <T>-<F> route points starting <T> 
 		//            and NEXT(<T>) constructs circular link of equation system.
 		//
 		for (int i = 0; i < cv; ++i) {
-			DdsVariable* pv = VARIABLE(p, i);
+			DdsVariable* pv = VARIABLE(i);
 			SCORE(pv) = i + 1;
 			if (IS_TARGETED(pv)) NEXT(pv) = pv;      //  <T> => self loop
 			else                 NEXT(pv) = nullptr; // !<T>
 		}
 		for (int i = 0; i < cv; ++i) {
-			DdsVariable* pv = VARIABLE(p, i);
+			DdsVariable* pv = VARIABLE(i);
 			if (!IS_TARGETED(pv)) continue;
-			ENABLE_BACKTRACK();
+			ENABLE_BACKTRACK(DDS_FLAG_SET | DDS_SFLAG_FREE | DDS_FLAG_INTEGRATED);
 			STACK_CLEAR();
 			PUSH(nullptr);
 			PUSH(pv);
 			while ((pv = PEEK()) != nullptr) {
 				if (!IS_FREE(pv)) {
 					// go-back further. but not go-back over <T>.
-					DdsVariable *pNext = MOVE_BACK(pv);
-					if (pNext != nullptr) PUSH(pNext);
-					else                  POP();
+					MOVE_BACK(pv, DDS_FLAG_SET | DDS_FLAG_TARGETED | DDS_FLAG_INTEGRATED);
+					if (INDEX(pv)>=0) PUSH(RHSV(pv,INDEX(pv)));
+					else              POP();
 				} else {
 					// reached to <F>.
 					DdsVariable* T = STACK_ELEMENT(1);
@@ -128,9 +116,9 @@ EXPORT(int) DdsSieveVariable(DDS_PROCESSOR ph)
 		}
 		// Back-track from <R> to <T>-<F> route.If it reaches the route,then set <R> to <T>s on the route.
 		// This back-track over <I>.
-		ENABLE_BACKTRACKI();
+		ENABLE_BACKTRACK(DDS_FLAG_SET | DDS_SFLAG_FREE);
 		for (int i = 0; i < cv; ++i) {
-			DdsVariable* pv = VARIABLE(p, i);
+			DdsVariable* pv = VARIABLE(i);
 			if (!IS_REQUIRED(pv)) continue;
 			if ( IS_TARGETED(pv)) continue;
 			STACK_CLEAR();
@@ -146,44 +134,51 @@ EXPORT(int) DdsSieveVariable(DDS_PROCESSOR ph)
 					} while ((T = NEXT(T)) != pv);
 				}
 				// Back-track
-				DdsVariable* pNext = MOVE_BACK(pv);
-				if (pNext != nullptr) PUSH(pNext);
-				else                  POP();
+				MOVE_BACK(pv, DDS_FLAG_SET | DDS_SFLAG_FREE | DDS_FLAG_TARGETED);
+				if (INDEX(pv)>=0) PUSH(RHSV(pv,INDEX(pv)));
+				else              POP();
 			}
 		}
 	}
 	//
 	// Set <AL> to every variables that have contribution to compute <R>(<R> itself is <AL>).
 	// This back-track over <I>.
-	for (int i = 0; i < cv; ++i) {
-		DdsVariable* pv = VARIABLE(p, i);
-		if (!IS_REQUIRED(pv)) continue;
-		SET_SFLAG_ON(pv, DDS_SFLAG_ALIVE);
-		STACK_CLEAR();
-		PUSH(nullptr);
-		PUSH(pv);
-		while ((pv = PEEK()) != nullptr) {
-			ASSERT(IS_ALIVE(pv));
-			POP();
-			if (NEXT(pv) != nullptr && !IS_REQUIRED(NEXT(pv))) {
-				// reached to not-yet-processed <F>-<T> route.
-				DdsVariable* pStart = NEXT(pv);
-				DdsVariable* rv = pStart;
-				do {
-					DDS_FLAG_ON(SYS_FLAG(rv), DDS_FLAG_REQUIRED);;
-				} while ((rv = NEXT(rv)) != pStart);
-			}
-			for (int j = 0; j < RHSV_COUNT(pv); ++j) {
-				DdsVariable* pNext = RHSV(pv, j);
-				SET_SFLAG_ON(pNext, DDS_SFLAG_ALIVE);
-				if (DDS_FLAG_OR(SYS_FLAG(pNext), DDS_FLAG_SET | DDS_FLAG_TARGETED)) continue;
-				PUSH(pNext);
+	for (int i = 0; i < cv; ++i) SET_SFLAG_OFF(VARIABLE(i), DDS_SFLAG_CHECKED);
+	do {
+		retry = false;
+		for (int i = 0; i < cv; ++i) {
+			DdsVariable* pv = VARIABLE(i);
+			if (!IS_REQUIRED(pv) || IS_CHECKED(pv)) continue;
+			SET_SFLAG_ON(pv, DDS_SFLAG_ALIVE);
+			STACK_CLEAR();
+			PUSH(nullptr);
+			PUSH(pv);
+			while ((pv = PEEK()) != nullptr) {
+				ASSERT(IS_ALIVE(pv));
+				POP();
+				if (IS_CHECKED(pv)) continue;
+				if (NEXT(pv) != nullptr && !IS_REQUIRED(NEXT(pv))) {
+					// reached to not-yet-processed <F>-<T> route.
+					DdsVariable* pStart = NEXT(pv);
+					DdsVariable* rv = pStart;
+					do {
+						DDS_FLAG_ON(SYS_FLAG(rv), DDS_FLAG_REQUIRED);;
+					} while ((rv = NEXT(rv)) != pStart);
+					retry = true;
+				}
+				SET_SFLAG_ON(pv, DDS_SFLAG_CHECKED);
+				for (int j = 0; j < RHSV_COUNT(pv); ++j) {
+					DdsVariable* pNext = RHSV(pv, j);
+					SET_SFLAG_ON(pNext, DDS_SFLAG_ALIVE);
+					if (DDS_FLAG_OR(SYS_FLAG(pNext), DDS_FLAG_SET | DDS_FLAG_TARGETED)) continue;
+					PUSH(pNext);
+				}
 			}
 		}
-	}
+	} while (retry);
 	// If all RHSVs of any <T>'s are not <AL>,the make the <T> to <S>.
 	for (int i = 0; i < cv; ++i) {
-		DdsVariable* pv = VARIABLE(p, i);
+		DdsVariable* pv = VARIABLE(i);
 		if (IS_TARGETED(pv)) {
 			if (!IS_ALIVE(RHSV(pv, 0))) {
 #ifdef _DEBUG
@@ -197,16 +192,16 @@ EXPORT(int) DdsSieveVariable(DDS_PROCESSOR ph)
 	//
 	// define connected components
 	for (int i = 0; i < cv; ++i) {
-		DdsVariable* pv = VARIABLE(p, i);
+		DdsVariable* pv = VARIABLE(i);
 		NEXT(pv)  = pv;
 		if (IS_ALIVE(pv)) SCORE(pv) = i + 1;
 		else              SCORE(pv) = 0;     // !<AL>'s component no. = 0
 	}
 	// Merge variables in the same connected component.
 	for (int i = 0; i < cv; ++i) {
-		DdsVariable* pv = VARIABLE(p, i);
+		DdsVariable* pv = VARIABLE(i);
 		if (!IS_ALIVE(pv)) continue;
-		int nr = BACKWAY_COUNT(pv); // Not back-track(MERGE) over <I>
+		int nr = BACKWAY_COUNT(pv, DDS_FLAG_SET | DDS_SFLAG_FREE | DDS_FLAG_INTEGRATED); // Not back-track(MERGE) over <I>
 		for(int j=0;j<nr;++j) {
 			DdsVariable* rVar = RHSV(pv,j);
 			ASSERT(IS_ALIVE(rVar));
@@ -215,12 +210,12 @@ EXPORT(int) DdsSieveVariable(DDS_PROCESSOR ph)
 	}
 	// Count total number of connected components and renumber them
 	for (int i = 0; i < cv; ++i) {
-		DdsVariable* pv = VARIABLE(p, i);
+		DdsVariable* pv = VARIABLE(i);
 		SET_SFLAG_OFF(pv, DDS_SFLAG_CHECKED);
 	}
 	int nc = 0; // Number of current connected component.
 	for (int i = 0; i < cv; ++i) {
-		DdsVariable* pv = VARIABLE(p, i);
+		DdsVariable* pv = VARIABLE(i);
 		if (!IS_ALIVE(pv) ) continue;
 		if (IS_CHECKED(pv)) continue;
 		++nc;
@@ -238,7 +233,7 @@ EXPORT(int) DdsSieveVariable(DDS_PROCESSOR ph)
 		cT[i] = 0;
 	}
 	for (int i = 0; i < cv; ++i) {
-		DdsVariable* pv = VARIABLE(p, i);
+		DdsVariable* pv = VARIABLE(i);
 		if (!IS_ALIVE(pv)) continue;
 		if (IS_FREE(pv)    ) ++cF[SCORE(pv) - 1];
 		if (IS_TARGETED(pv)) ++cT[SCORE(pv) - 1];
@@ -247,5 +242,5 @@ EXPORT(int) DdsSieveVariable(DDS_PROCESSOR ph)
 		if (cF[i] != cT[i]) THROW(DDS_ERROR_FT_NUMBER, DDS_MSG_FT_NUMBER);
 	}
 	LEAVE(ph);
-	return STATUS(p);
+	return STATUS();
 }

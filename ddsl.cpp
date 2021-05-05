@@ -18,9 +18,19 @@
 
 EXPORT(int)  DdsCompileGraph(DDS_PROCESSOR p)
 {
-	int e = DdsSieveVariable(p);
+	int e = 0;
+	DdsDbgPrintF(stdout, "Before processing:", p);
+	e = DdsSieveVariable(p);
+	DdsDbgPrintF(stdout, "After DdsSieveVariable(p)", p);
 	if (e) return e;
-	return 0;
+	e = DdsDivideLoop(p);
+	DdsDbgPrintF(stdout, "After DdsDivideLoop(p)", p);
+	if (e) return e;
+	e = DdsCheckRouteFT(p);
+	DdsDbgPrintF(stdout, "After DdsCheckRouteFT(p)", p);
+	if (e) return e;
+
+	return e;
 }
 
 
@@ -49,14 +59,26 @@ EXPORT(int)  DdsCreateProcessor(DDS_PROCESSOR* p, int nv)
 	return 0;
 }
 
-EXPORT(void) DdsDeleteProcessor(DDS_PROCESSOR* p)
+EXPORT(void) DdsDeleteProcessor(DDS_PROCESSOR* ph)
 {
-	if (p == nullptr) return;
-	DdsProcessor* pr = (DdsProcessor*)(*p);
-	for(int i=0;i<pr->v_count;++i) MemFree((void**)&(pr->Vars[i]));
-	MemFree((void**)&(pr->Vars));
-	MemFree((void**)&(pr));
-	*p = nullptr;
+	if (ph == nullptr) return;
+	DdsProcessor* p = (DdsProcessor*)(*ph);
+	for(int i=0;i<VARIABLE_COUNT();++i) MemFree((void**)&(VARIABLE(i)));
+	MemFree((void**)&(VARIABLEs()));
+	
+	// free memories allocated at  DdsCheckRouteFT()
+	if (TVs() != nullptr)          MemFree((void**)&(TVs()));
+	if (F_COUNTs() != nullptr)     MemFree((void**)&(F_COUNTs()));
+	if (F_MAX_COUNTs() != nullptr) MemFree((void**)&(F_MAX_COUNTs()));
+	for (int i = 0; i < T_COUNT(); ++i) {
+		MemFree((void**)&(Fs_CONNECTED(i)));
+	}
+	if (FT_MATRIX() != nullptr)    MemFree((void**)&(FT_MATRIX()));
+
+
+	// Finally delete processor!
+	MemFree((void**)&(p));
+	*ph = nullptr;
 #ifdef _DEBUG
 	PrintAllocCount("DdsDeleteProcessor()");
 #endif
@@ -71,9 +93,9 @@ EXPORT(DDS_VARIABLE*) DdsVariables(int *nv,DDS_PROCESSOR p)
 
 EXPORT(DDS_VARIABLE*) DdsRhsvs(int* nr, DDS_VARIABLE v)
 {
-	DdsVariable* pv = (DdsVariable*)v;
-	*nr = pv->Nr;
-	return (DDS_VARIABLE*)(pv->Rhsvs);
+	DdsVariable* p = (DdsVariable*)v;
+	*nr = RHSV_COUNT(p);
+	return (DDS_VARIABLE*)(RHSVs(p));
 }
 
 
@@ -87,7 +109,7 @@ static void AddVariable(DdsProcessor* p, DdsVariable* pv)
 
 static DdsVariable* AllocVariable(const char* name, unsigned int f, double val, ComputeVal func, int nr)
 {
-	int l = strlen(name) + 2;
+	int l = strlen(name) + 3;
 	DdsVariable* v = (DdsVariable*)MemAlloc(sizeof(DdsVariable) + l + nr * sizeof(DdsVariable*));
 	v->Function = (ComputeVal)func;
 	v->Value = val;
@@ -165,9 +187,9 @@ EXPORT(void) DdsDbgPrintF(FILE* f, const char* title, DDS_PROCESSOR p)
 		else                                        fprintf(f, "i");
 		if (DDS_FLAG_OR(F, DDS_FLAG_VOLATILE))      fprintf(f, "V");  /* <V> */
 		else                                        fprintf(f, "v");
-		if (DDS_FLAG_OR(F, DDS_FLAG_DIVIDABLE))     fprintf(f, "D");  /* <D> */
+		if (DDS_FLAG_OR(F, DDS_FLAG_DIVISIBLE))     fprintf(f, "D");  /* <D> */
 		else                                        fprintf(f, "d");
-		if (DDS_FLAG_OR(F, DDS_FLAG_NON_DIVIDABLE)) fprintf(f, "N");  /* <N> */
+		if (DDS_FLAG_OR(F, DDS_FLAG_NON_DIVISIBLE)) fprintf(f, "N");  /* <N> */
 		else                                        fprintf(f, "n");
 		fprintf(f, "-");
 		F = pv->SFlag;
@@ -181,9 +203,9 @@ EXPORT(void) DdsDbgPrintF(FILE* f, const char* title, DDS_PROCESSOR p)
 		else                                        fprintf(f, "i");
 		if (DDS_FLAG_OR(F, DDS_FLAG_VOLATILE))      fprintf(f, "V");  /* <V> */
 		else                                        fprintf(f, "v");
-		if (DDS_FLAG_OR(F, DDS_FLAG_DIVIDABLE))     fprintf(f, "D");  /* <D> */
+		if (DDS_FLAG_OR(F, DDS_FLAG_DIVISIBLE))     fprintf(f, "D");  /* <D> */
 		else                                        fprintf(f, "d");
-		if (DDS_FLAG_OR(F, DDS_FLAG_NON_DIVIDABLE)) fprintf(f, "N");  /* <N> */
+		if (DDS_FLAG_OR(F, DDS_FLAG_NON_DIVISIBLE)) fprintf(f, "N");  /* <N> */
 		else                                        fprintf(f, "n");
 		if (DDS_FLAG_OR(F, DDS_SFLAG_ALIVE))        fprintf(f, " AL");  /* <AL> */
 		else                                        fprintf(f, " al");
@@ -244,7 +266,7 @@ EXPORT(int) DdsCheckVariable(DDS_VARIABLE hv)
 		if (DDS_FLAG_OR(f, DDS_FLAG_INTEGRATED | DDS_FLAG_TARGETED)) return DDS_ERROR_FLAG;
 	}
 	if (DDS_FLAG_AND(f, DDS_FLAG_INTEGRATED | DDS_FLAG_TARGETED)) return DDS_ERROR_FLAG;
-	if (DDS_FLAG_AND(f, DDS_FLAG_DIVIDABLE | DDS_FLAG_NON_DIVIDABLE)) return DDS_ERROR_FLAG;
+	if (DDS_FLAG_AND(f, DDS_FLAG_DIVISIBLE | DDS_FLAG_NON_DIVISIBLE)) return DDS_ERROR_FLAG;
 	if (DDS_FLAG_OR(f, DDS_FLAG_TARGETED)) {
 		if(RHSV_COUNT(pv)<=0 || pv->Function==nullptr) return DDS_ERROR_FLAG;
 	}

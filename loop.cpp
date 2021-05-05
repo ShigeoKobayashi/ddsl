@@ -18,15 +18,18 @@
 #define score_non_div  1
 #define score_normal   10
 #define score_divide   100
-
+//
+// Find and divide loops.
+// The variable to be divided willbe set to <F>,and newly created variable is <T> with the name NAME(<DD>)+"+".
+//
 EXPORT(int) DdsDivideLoop(DDS_PROCESSOR ph)
 {
 	ENTER(ph);
 	bool retry = false;
-	int cv = VARIABLE_COUNT(p);
+	int cv = VARIABLE_COUNT();
 	STACK(cv + 1);
 	for (int i = 0; i < cv; ++i) {
-		DdsVariable* pv = VARIABLE(p, i);
+		DdsVariable* pv = VARIABLE(i);
 		CLEAR_PROC_FLAG(pv);
 		SCORE(pv) = 0;
 		if (!IS_ALIVE(pv)) SET_SFLAG_ON(pv, DDS_SFLAG_CHECKED);
@@ -41,7 +44,7 @@ EXPORT(int) DdsDivideLoop(DDS_PROCESSOR ph)
 			retry = false;
 			v_route = nullptr;
 			for (int i = 0; i < cv; ++i) {
-				DdsVariable* pv = VARIABLE(p, i);
+				DdsVariable* pv = VARIABLE(i);
 				if (IS_CHECKED(pv)) continue;
 				int ir = RHSV_COUNT(pv);
 				while (--ir >= 0) {	if (!IS_CHECKED(RHSV(pv, ir))) break; }
@@ -63,15 +66,16 @@ EXPORT(int) DdsDivideLoop(DDS_PROCESSOR ph)
 	auto DIVIDE_LOOP = [&](DdsVariable *pv) {
 		DdsVariable* v_divided     = pv;
 		int          score_divided = 0;
-		for (int i = 0; i < cv; ++i) SCORE(VARIABLE(p, i)) = 0;
+		for (int i = 0; i < cv; ++i) SCORE(VARIABLE(i)) = 0;
 		STACK_CLEAR();
 		PUSH(nullptr);
 		PUSH_F(pv);
-		ENABLE_BACKTRACK();
+		ENABLE_BACKTRACK(DDS_FLAG_SET | DDS_SFLAG_FREE | DDS_FLAG_TARGETED | DDS_FLAG_INTEGRATED | DDS_SFLAG_DIVIDED);
 		while ((pv = PEEK()) != nullptr) {
-			DdsVariable* rv = MOVE_BACK(pv);
-			if (rv==nullptr) { POP_F(); }
+			MOVE_BACK(pv, DDS_FLAG_SET | DDS_SFLAG_FREE | DDS_FLAG_TARGETED | DDS_FLAG_INTEGRATED| DDS_SFLAG_DIVIDED);
+			if (INDEX(pv) < 0) { POP_F(); }
 			else {
+				DdsVariable* rv = RHSV(pv, INDEX(pv));
 				if (IS_STACKED(rv)) {
 					// rv is stacked ==> rv is on the loop (in STACK)
 					int ix = STACK_SIZE();
@@ -93,7 +97,17 @@ EXPORT(int) DdsDivideLoop(DDS_PROCESSOR ph)
 		}
 		ASSERT(v_divided!=nullptr);
 		TRACE_EX((" --variable (%s) divided! ",NAME(v_divided)));
-		SET_SFLAG_ON(v_divided, DDS_SFLAG_DIVIDED|DDS_SFLAG_CHECKED);
+		SET_SFLAG_ON(v_divided, DDS_SFLAG_FREE | DDS_SFLAG_DIVIDED | DDS_SFLAG_CHECKED);
+
+		//
+		// create 1 variable and set <T>.
+		//
+		int e = DdsAddVariableA(p, &pv, NAME(v_divided),USER_FLAG(v_divided),VALUE(v_divided),FUNCTION(v_divided),RHSV_COUNT(v_divided), (DDS_VARIABLE**)RHSVs(v_divided));
+		if (e != 0) THROW(e, "Can not divide a variable (or create a new variable) in DdsDivideLoop()");
+		SET_SFLAG_ON(pv, SYS_FLAG(v_divided)|DDS_FLAG_TARGETED);
+		SET_SFLAG_OFF(pv, DDS_SFLAG_FREE);
+		int l = strlen(NAME(pv));
+		((char*)NAME(pv))[l] = '+'; // sign of divided and added variable.
 	};
 
 	// Find loop => divide it if found.
@@ -104,5 +118,5 @@ EXPORT(int) DdsDivideLoop(DDS_PROCESSOR ph)
 		DIVIDE_LOOP(v_roue);
 	}
 	LEAVE(ph);
-	return STATUS(p);
+	return STATUS();
 }

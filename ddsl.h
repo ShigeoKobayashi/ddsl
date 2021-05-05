@@ -77,11 +77,20 @@ typedef struct PROCESSOR {
 #else
 typedef struct {
 #endif
-		DdsVariable** Vars;
-		int           v_count;
-		int           v_max;
-		int           t_count;
-		int           status;
+		DdsVariable** Vars;    /* Variables registered  */
+		int           v_count; /* Total number of variables registered to Vars[] */
+		int           v_max;   /* Size of the Vars[] */
+		int           status;  /* status of function call */
+
+		/* Arrays dynamically allocated during the processing. */
+		DdsVariable**  Ts; /* Allocated by DdsCheckRouteFT() */
+		int            t_count; /* number of <T>s effective */
+		DdsVariable*** Fs;      /* Fs[i][0] is paired <F> with <T>[i],other Fs[i][] are <F>s connected. */
+		int*           f_count; /* f_count[i] is the count of <F>s connected to <T>[i]. */
+		int*           f_max;   /* f_max[i] is the max size of Fs[i][...]*/
+
+		int           *b_size;  /* size of each block */
+		int            b_count; /* total number of blocks. */
 } DdsProcessor;
 
 /*
@@ -99,8 +108,8 @@ typedef DdsVariable*  DDS_VARIABLE;   /* Variable handle  */
 #define DDS_FLAG_TARGETED       0x00000004  /* <T> */
 #define DDS_FLAG_INTEGRATED     0x00000008  /* <I> */
 #define DDS_FLAG_VOLATILE       0x00000010  /* <V> */
-#define DDS_FLAG_DIVIDABLE      0x00000020  /* <D> */
-#define DDS_FLAG_NON_DIVIDABLE  0x00000040  /* <N> */
+#define DDS_FLAG_DIVISIBLE      0x00000020  /* <D> */
+#define DDS_FLAG_NON_DIVISIBLE  0x00000040  /* <N> */
 #define DDS_FLAG_MASK           0x00000FFF  /* Mask */
 
 /*   System flags   */
@@ -141,7 +150,10 @@ typedef DdsVariable*  DDS_VARIABLE;   /* Variable handle  */
 #define DDS_ERROR_FT_NUMBER     -5 /* Total number of <F>s and <T>s are different in the same connected component. */
 #define DDS_MSG_FT_NUMBER       "Total number of <F>s and <T>s are different in the same connected component. "
 
-#define DDS_ERROR_INDEX         -6 /* Invalid RHSV index.*/
+#define DDS_ERROR_FT_ROUTE      -6 /* Independent route can't find from each <F> to <T>. */
+#define DDS_MSG_FT_ROUTE        "Independent route can't be found from each <F> to <T>. "
+
+#define DDS_ERROR_INDEX         -7 /* Invalid RHSV index.*/
 #define DDS_MSG_INDEX           "Invalid RHSV index."
 
 #define DDS_ERROR_SYSTEM        -999 /* Undefined c/c++ level error. */
@@ -163,6 +175,9 @@ EXPORT(unsigned int)  DdsSystemFlag(DDS_VARIABLE hv);
 EXPORT(void)          DdsDbgPrintF(FILE* f, const char* title, DDS_PROCESSOR p);
 
 EXPORT(int)           DdsSieveVariable(DDS_PROCESSOR ph);
+EXPORT(int)           DdsDivideLoop(DDS_PROCESSOR ph);
+EXPORT(int)           DdsCheckRouteFT(DDS_PROCESSOR ph);
+
 EXPORT(DDS_VARIABLE*) DdsVariables(int* nv, DDS_PROCESSOR p);
 EXPORT(DDS_VARIABLE*) DdsRhsvs(int* nr, DDS_VARIABLE v);
 

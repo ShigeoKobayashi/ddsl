@@ -12,54 +12,77 @@
 #include "ddsl.h"
 #include "debug.h"
 
-#define ENTER(h)   DdsProcessor*p;try{p=(DdsProcessor*)h; STATUS(p)=0;
-#define LEAVE(h)   } catch(Exception& ex) {return STATUS(p)=ex.Code;}\
-                     catch (...) { TRACE_EX(("DdsAddVariableA() aborted")); return STATUS(p)=DDS_ERROR_SYSTEM;}
+#define ENTER(h)   DdsProcessor*p;try{p=(DdsProcessor*)h; STATUS()=0;
+#define LEAVE(h)   } catch(Exception& ex) {return STATUS()=ex.Code;}\
+                     catch (...) { TRACE_EX(("DdsAddVariableA() aborted")); return STATUS()=DDS_ERROR_SYSTEM;}
 
  // For DdsProcessor
-#define VARIABLE_COUNT(p)    ((p)->v_count)
-#define T_COUNT(p)           ((p)->t_count)
-#define VARIABLE(p,i)        ((p)->Vars[i])
-#define STATUS(p)            ((p)->status)
+#define VARIABLE_COUNT()    ((p)->v_count)
+#define VARIABLEs()         ((p)->Vars)
+#define VARIABLE(i)         (VARIABLEs()[i])
+#define STATUS()            ((p)->status)
+
+#define T_COUNT()           ((p)->t_count)
+#define TVs()               ((p)->Ts)
+#define TV(i)               (TVs()[i])
+#define B_COUNT()           ((p)->b_count)
+#define B_SIZE(i)           ((p)->f_max[i])   // re-use array (f_max is no more used after block-decomposition)
+
+#define F_COUNTs()          ((p)->f_count)
+#define F_COUNT(i)          (F_COUNTs()[i])
+#define F_MAX_COUNTs()      ((p)->f_max)
+#define F_MAX_COUNT(i)      ((p)->f_max[i])
+#define FT_MATRIX()         ((p)->Fs)
+#define Fs_CONNECTED(i)     (FT_MATRIX()[i])
+#define F_CONNECTED(i,j)    (Fs_CONNECTED(i)[j])
+#define F_PAIRED(i)         (Fs_CONNECTED(i)[0])
+
 
 // For DdsVariable
-#define USER_FLAG(v)        v->UFlag
-#define SYS_FLAG(v)         v->SFlag
-#define SET_SFLAG_ON(v,f)   v->SFlag |= f;
-#define SET_SFLAG_OFF(v,f)  v->SFlag &= (~f);
+#define USER_FLAG(v)        ((v)->UFlag)
+#define SYS_FLAG(v)         ((v)->SFlag)
+#define SET_SFLAG_ON(v,f)   ((v)->SFlag |= (f));
+#define SET_SFLAG_OFF(v,f)  ((v)->SFlag &= (~f));
+#define IS_SFLAG_OR(v,f)    ((SYS_FLAG((v))&(f))!=0)
+#define IS_SFLAG_AND(v,f)   ((SYS_FLAG((v))&(f))==(f))
 
+#define CLEAR_PROC_FLAG(v)  (SYS_FLAG(v) &= ~DDS_PROC_MASK)
+
+#define NAME(v)       ((v)->Name)
 #define SCORE(v)      ((v)->score)
 #define NEXT(v)       ((v)->next)
 #define INDEX(v)      ((v)->index)
 #define RHSV_COUNT(v) ((v)->Nr)
-#define RHSV(v,i)     ((v)->Rhsvs[i])
+#define RHSVs(v)      ((v)->Rhsvs)
+#define RHSV(v,i)     (RHSVs(v)[i])
+#define VALUE(v)      ((v)->Value)
+#define FUNCTION(v)   ((v)->Function)
 
-#define IS_REQUIRED(v)      DDS_FLAG_OR(SYS_FLAG(v),DDS_FLAG_REQUIRED)
-#define IS_DIVIDED(v)       DDS_FLAG_OR(SYS_FLAG(v),DDS_SFLAG_DIVIDED)
-#define IS_TARGETED(v)      DDS_FLAG_OR(SYS_FLAG(v),DDS_FLAG_TARGETED|DDS_SFLAG_DIVIDED)
-#define IS_VOLATILE(v)      DDS_FLAG_OR(SYS_FLAG(v),DDS_FLAG_VOLATILE)
-#define IS_INTEGRATED(v)    DDS_FLAG_OR(SYS_FLAG(v),DDS_FLAG_INTEGRATED)
-#define IS_FREE(v)          DDS_FLAG_OR(SYS_FLAG(v),DDS_SFLAG_FREE|DDS_SFLAG_DIVIDED)
-#define IS_ALIVE(v)         DDS_FLAG_OR(SYS_FLAG(v),DDS_SFLAG_ALIVE)
-#define IS_SET(v)           DDS_FLAG_OR(SYS_FLAG(v),DDS_FLAG_SET)
-#define IS_CHECKED(v)       DDS_FLAG_OR(SYS_FLAG(v),DDS_SFLAG_CHECKED)
-#define IS_STACKED(v)       DDS_FLAG_OR(SYS_FLAG(v),DDS_SFLAG_STACKED)
+#define IS_REQUIRED(v)      IS_SFLAG_OR(v,DDS_FLAG_REQUIRED)
+#define IS_DIVIDED(v)       IS_SFLAG_OR(v,DDS_SFLAG_DIVIDED)
+#define IS_TARGETED(v)      IS_SFLAG_OR(v,DDS_FLAG_TARGETED)
+#define IS_VOLATILE(v)      IS_SFLAG_OR(v,DDS_FLAG_VOLATILE)
+#define IS_INTEGRATED(v)    IS_SFLAG_OR(v,DDS_FLAG_INTEGRATED)
+#define IS_FREE(v)          IS_SFLAG_OR(v,DDS_SFLAG_FREE)
+#define IS_ALIVE(v)         IS_SFLAG_OR(v,DDS_SFLAG_ALIVE)
+#define IS_SET(v)           IS_SFLAG_OR(v,DDS_FLAG_SET)
+#define IS_CHECKED(v)       IS_SFLAG_OR(v,DDS_SFLAG_CHECKED)
+#define IS_STACKED(v)       IS_SFLAG_OR(v,DDS_SFLAG_STACKED)
+#define IS_DIVISIBLE(v)     IS_SFLAG_OR(v,DDS_FLAG_DIVISIBLE)
+#define IS_NDIVISIBLE(v)    IS_SFLAG_OR(v,DDS_FLAG_NON_DIVISIBLE)
+
+// f is an exception flag (any bit of f is on,then returns 0 or do nothing.
+#define BACKWAY_COUNT(v,f)    (IS_SFLAG_OR(v, f) ? 0 : RHSV_COUNT(v))
+#define ENABLE_BACKTRACK(f)   {for (int jv = 0; jv < cv; ++jv) INDEX(VARIABLE(jv)) = BACKWAY_COUNT(VARIABLE(jv),f);}
+#define MOVE_BACK(v,f)        {if (INDEX(v) >= 0) {while (--INDEX(v) >= 0) {if (!(IS_SFLAG_OR(RHSV(v, INDEX(v)), f))) break;}}}
 
 // Stack operations
-#define STACK(n)    vector<DdsVariable*> stack(n);\
-    auto  BACKWAY_COUNT = [](DdsVariable* v) {\
-        if (DDS_FLAG_OR(SYS_FLAG(v), DDS_FLAG_SET|DDS_SFLAG_FREE|DDS_FLAG_INTEGRATED)) return 0;\
-        return RHSV_COUNT(v);};\
-    auto  MOVE_BACK = [](DdsVariable* v) -> DdsVariable* {\
-        while (INDEX(v) >= 0) {int ix=--INDEX(v);if(ix>=0 && !(DDS_FLAG_OR(SYS_FLAG(RHSV(v,ix)),DDS_FLAG_TARGETED|DDS_SFLAG_DIVIDED))) return RHSV(v,ix);}\
-        return (DdsVariable*)nullptr;};\
-    auto  ENABLE_BACKTRACK = [&p,&cv,&BACKWAY_COUNT]() {for(int jv=0;jv<cv;++jv) INDEX(VARIABLE(p, jv))=BACKWAY_COUNT(VARIABLE(p, jv));};
-
+#define STACK(n)         vector<DdsVariable*> stack(n)
 #define PUSH(v)          stack.push_back(v)
-#define PUSH_F(v)        {DDS_FLAG_ON(SYS_FLAG(v),DDS_SFLAG_STACKED);PUSH(v);}
+#define PUSH_F(v)        {SET_SFLAG_ON(v,DDS_SFLAG_STACKED);PUSH(v);}
 #define POP()            stack.pop_back()
 #define PEEK()           stack.back()
-#define POP_F()          {DDS_FLAG_OFF(SYS_FLAG(PEEK()),DDS_SFLAG_STACKED);POP();}
+#define POP_F()          {SET_SFLAG_OFF(PEEK(),DDS_SFLAG_STACKED);POP();}
 #define STACK_CLEAR()    stack.clear()
 #define STACK_SIZE()     ((int)stack.size())
 #define STACK_ELEMENT(i) stack[i]
