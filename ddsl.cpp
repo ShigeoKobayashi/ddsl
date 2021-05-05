@@ -84,11 +84,11 @@ EXPORT(void) DdsDeleteProcessor(DDS_PROCESSOR* ph)
 #endif
 }
 
-EXPORT(DDS_VARIABLE*) DdsVariables(int *nv,DDS_PROCESSOR p)
+EXPORT(DDS_VARIABLE*) DdsVariables(int *nv,DDS_PROCESSOR ph)
 {
-	DdsProcessor* pr = (DdsProcessor*)p;
-	*nv = pr->v_count;
-	return (DDS_VARIABLE*)(pr->Vars);
+	DdsProcessor* p = (DdsProcessor*)ph;
+	*nv = VARIABLE_COUNT();
+	return (DDS_VARIABLE*)VARIABLEs();
 }
 
 EXPORT(DDS_VARIABLE*) DdsRhsvs(int* nr, DDS_VARIABLE v)
