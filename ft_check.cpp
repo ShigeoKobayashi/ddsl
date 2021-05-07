@@ -36,10 +36,10 @@ EXPORT(int) DdsCheckRouteFT(DDS_PROCESSOR ph)
 	T_COUNT() = 0;
 	for (int i = 0; i < cv; ++i) {
 		DdsVariable* pv = VARIABLE(i);
-		if (IS_ALIVE(pv) && IS_TARGETED(pv)) ++T_COUNT();
+		if (IS_ALIVE(pv) && IS_TARGETED(pv)) ++T_COUNT(); // count <T> first.
 	}
 	TRACE_EX(("DdsCheckRouteFT(): <T>s=%d",T_COUNT()));
-	if (T_COUNT() <= 0) return 0;
+	if (T_COUNT() <= 0) return 0; // nothing to do here!
 
 	//
 	// allocate <F> & <T> related memories.
@@ -54,7 +54,10 @@ EXPORT(int) DdsCheckRouteFT(DDS_PROCESSOR ph)
 		DdsVariable* pv = VARIABLE(i);
 		SCORE(pv) = -1;
 		NEXT(pv) = nullptr;
-		if (IS_ALIVE(pv) && IS_TARGETED(pv)) TV(ix++) = pv;
+		if (IS_ALIVE(pv) && IS_TARGETED(pv)) {
+			SCORE(pv) = ix; // Route ID!
+			TV(ix++) = pv;
+		}
 	}
 
 	auto ADD_F = [&p](int i, DdsVariable* f) {
@@ -65,49 +68,81 @@ EXPORT(int) DdsCheckRouteFT(DDS_PROCESSOR ph)
 		Fs_CONNECTED(i)[F_COUNT(i)++] = f;
 	};
 
-	auto REACHED_F = [&](DdsVariable *pf,int it) {
+	auto DETACH_CROSS_NODE = [&](DdsVariable* pr) {
+		DdsVariable* pv = NEXT(pr);
+		NEXT(pr) = PEEK(); // change route!
+		do {
+			DdsVariable* pn = NEXT(pv);
+			ASSERT(!IS_STACKED(pv));
+			SCORE(pv) = -1;
+			NEXT(pv) = nullptr;
+			pv = pn;
+		} while (!IS_STACKED(pv));
+		// re-route!
+		do {
+			pv = PEEK();
+			POP_F();
+		} while (!IS_TARGETED(pv));
+		pv = PEEK();
+		ASSERT(INDEX(pv) >= 0);
+		PUSH_F(RHSV(pv,INDEX(pv)));
+	};
+
+	auto GET_ROUTE_ID = [&](bool cancel) {
+		int ix = STACK_SIZE();
+		while (--ix > 0) if (IS_TARGETED(STACK_ELEMENT(ix))) break;
+		ASSERT(ix > 0);
+		DdsVariable* pv = STACK_ELEMENT(ix);
+		ix = SCORE(pv);
+		if (cancel && (NEXT(pv) != nullptr)) {
+			// pv(==<T>) is previously paired another <F> == cancel it!
+			DdsVariable* pn = pv;
+			do {
+				SCORE(pv) = -1;
+				pn = NEXT(pv);
+				NEXT(pv) = nullptr;
+				pv = pn;
+			} while (!IS_TARGETED(pv));
+		}
+		return ix; // route ID.
+	};
+
+
+	auto REACHED_F = [&](DdsVariable *pf) {
 		TRACE(("Reached to %s <F>.\n", NAME(pf)));
 		ASSERT(NEXT(pf) == nullptr);
 		do {
+			int id = GET_ROUTE_ID(true);
+			SCORE(pf) = id; // rooute ID
 			DdsVariable* pv = pf;
-			DdsVariable* pn;
-			SCORE(pv) = it;
 			do {
-				pn = PEEK(); POP_F();
+				DdsVariable *pn = PEEK();
 				NEXT(pv) = pn;
 				pv = pn;
-				SCORE(pv) = it;
+				SCORE(pv) = id;
+				POP_F();
 			} while (!IS_TARGETED(pv));
-			DdsVariable *prev_f = NEXT(pv);
-			NEXT(pv) = pf;
-			if (prev_f != nullptr) {
-				// <T> was aready paired! (find cross point)
-				pv = NEXT(prev_f);
-				if (SCORE(pv) != it) {
-					// cross point exists!
-					while (SCORE(pv) != it) pv = NEXT(pv);
-					pn = pv;  // pv: cross point
-					while ((pn = RHSV(pn, INDEX(pn))) != prev_f) {
-						PUSH_F(pn);
-					}
-					while (SCORE(NEXT(pv)) != it) {
-						SCORE(pv) = -1;
-						pn = NEXT(pv);
-						NEXT(pv) = nullptr;
-					}
-				}
-				pf = prev_f;
+			NEXT(pv) = pf; // NEXT(<T>) = paired <F>
+			if ((pv=PEEK()) != nullptr) {
+				do {
+					ASSERT(INDEX(pv)>=0);
+					pv = RHSV(pv, INDEX(pv));
+					PUSH(pv);
+				} while (!IS_FREE(pv));
+				pf = pv;
+				POP_F();
 			}
 		} while (PEEK() != nullptr);
 	};
 
-	auto REACHED_ROUTE = [&](DdsVariable* pr,int it) {
-		TRACE(("%s is on previously defined route.\n",NAME(pr)));
+	auto REACHED_ROUTE = [&](DdsVariable* pr) {
+		TRACE(("%s is on previously defined route(cross node).\n",NAME(pr)));
 		ASSERT(NEXT(pr) != nullptr);
-		SCORE(pr) = it; // cross point!
-		// go to starting <T>
-		DdsVariable* pv = NEXT(pr);
+		DdsVariable* pv = PEEK();
+		// go to starting <T> which is previously paired to <F>.
+		pv = NEXT(pr);
 		while (!IS_TARGETED(pv)) pv = NEXT(pv);
+		// push back from <T> to the variable before the cross node (cross node is not stacked!)
 		do {
 			PUSH_F(pv);
 		} while ((pv = RHSV(pv, INDEX(pv))) != pr);
@@ -130,10 +165,17 @@ EXPORT(int) DdsCheckRouteFT(DDS_PROCESSOR ph)
 			if(INDEX(pv) < 0) { POP_F(); continue; }
 			DdsVariable *rv = RHSV(pv, INDEX(pv));
 			TRACE(("%s ", NAME(rv)));
-
-			if      (NEXT(rv) != nullptr) { REACHED_ROUTE(rv, i); } // reached to previously defined route.
-			else if (IS_FREE(rv))         { REACHED_F(rv, i); ok = true; }       // reached to <F>
-			else PUSH_F(rv);
+			if (NEXT(rv) != nullptr) { 
+				// reached to previously defined route.
+				int id = GET_ROUTE_ID(false);
+				if (id == SCORE(rv)) DETACH_CROSS_NODE(rv); // reached to current route again ==> detach redundant nodes.
+				else                 REACHED_ROUTE(rv);     // reached to different route.
+			} else if (IS_FREE(rv)) {
+				REACHED_F(rv);      // reached to <F>
+				ok = true;
+			} else {
+				PUSH_F(rv);
+			}
 		}
 		if (!ok) THROW(DDS_ERROR_FT_ROUTE, DDS_MSG_FT_ROUTE);
 	}
@@ -163,13 +205,6 @@ EXPORT(int) DdsCheckRouteFT(DDS_PROCESSOR ph)
 				PUSH(rv);
 			}
 		}
-#ifdef _DEBUG
-		printf(" %d) %s <- %s", i, NAME(TV(i)), NAME(F_CONNECTED(i, 0)));
-		for (int j = 1; j < F_COUNT(i); ++j) {
-			printf(",%s", NAME(F_CONNECTED(i, j)));
-		}
-		printf("\n");
-#endif
 	}
 
 	//
@@ -180,9 +215,6 @@ EXPORT(int) DdsCheckRouteFT(DDS_PROCESSOR ph)
 		int s = s1;
 		DdsVariable* v = v2;
 		if (s1 == s2) return;
-#ifdef _DEBUG
-		printf("Merge %s and %s\n", NAME(v1), NAME(v2));
-#endif
 		if (s1 > s2) {
 			s = s2;
 			v = v1;
@@ -198,15 +230,9 @@ EXPORT(int) DdsCheckRouteFT(DDS_PROCESSOR ph)
 
 	// lopp of <Fs> indicates the block decmposed.
 	auto NEXT_T = [&p](DdsVariable* pt) {
-#ifdef _DEBUG
-		if (SCORE(pt) <= 0) printf(" %s->no-more!\n",NAME(pt));
-#endif
 		if (SCORE(pt) <= 0) return (DdsVariable*)nullptr;
 		int ix = INDEX(pt);
 		DdsVariable* pf = F_CONNECTED(ix, --SCORE(pt));
-#ifdef _DEBUG
-		printf(" %s->%s->%s\n", NAME(pt), NAME(pf), NAME(TV(INDEX(pf))));
-#endif
 		return TV(INDEX(pf));
 	};
 
@@ -303,9 +329,6 @@ EXPORT(int) DdsCheckRouteFT(DDS_PROCESSOR ph)
 		SCORE(F_PAIRED(i)) = SCORE(TV(i));
 	}
 	B_COUNT() = nb;
-
-
-
 
 #ifdef _DEBUG
 	printf("BLOCKS:");
