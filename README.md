@@ -1,2 +1,2 @@
 # ddsl
-Digital Dynamic Simulation Libraly
+Digital Dynamic Simulation Libraly (based on Graph Theory)
