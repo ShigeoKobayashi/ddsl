@@ -29,7 +29,9 @@ EXPORT(int)  DdsCompileGraph(DDS_PROCESSOR p)
 	e = DdsCheckRouteFT(p);
 	DdsDbgPrintF(stdout, "After DdsCheckRouteFT(p)", p);
 	if (e) return e;
-
+	e = DdsBuildSequence(p);
+	DdsDbgPrintF(stdout, "After DdsBuildSequence(p)", p);
+	if (e) return e;
 	return e;
 }
 
@@ -75,6 +77,8 @@ EXPORT(void) DdsDeleteProcessor(DDS_PROCESSOR* ph)
 	}
 	if (FT_MATRIX() != nullptr)    MemFree((void**)&(FT_MATRIX()));
 
+	// DdsBuildSequence()
+	if (IVs() != nullptr)          MemFree((void**)&(IVs()));
 
 	// Finally delete processor!
 	MemFree((void**)&(p));

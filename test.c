@@ -39,6 +39,42 @@ void Test1()
 	getchar();
 }
 
+#define NV1 13
+void Test1_1()
+{
+	int i, j, nr;
+	DDS_VARIABLE  V[NV1];
+	DDS_VARIABLE* pV;
+
+	printf("=== Test1_1()---\n");
+	DDS_PROCESSOR p;
+	DdsCreateProcessor(&p, 5);
+	DdsAddVariableV(p, &V[0], "0", 0, 0.0, CompVal, 1, &V[1]);
+	DdsAddVariableV(p, &V[1], "1", 0, 0.0, CompVal, 1, &V[3]);
+	DdsAddVariableV(p, &V[2], "2", 0, 0.0, CompVal, 1, &V[0]);
+	DdsAddVariableV(p, &V[3], "3", 0, 0.0, CompVal, 2, &V[2], &V[5]);
+	DdsAddVariableV(p, &V[4], "4", 0, 0.0, CompVal, 1, &V[3]);
+	DdsAddVariableV(p, &V[5], "5", 0, 0.0, CompVal, 1, &V[6]);
+	DdsAddVariableV(p, &V[6], "6", 0, 0.0, CompVal, 2, &V[4], &V[7]);
+	DdsAddVariableV(p, &V[7], "7", 0, 0.0, CompVal, 1, &V[9]);
+	DdsAddVariableV(p, &V[8], "8", 0, 0.0, CompVal, 1, &V[6]);
+	DdsAddVariableV(p, &V[9], "9", 0, 0.0, CompVal, 2, &V[8],&V[10]);
+	DdsAddVariableV(p, &V[10], "10", 0, 0.0, CompVal, 1, &V[12]);
+	DdsAddVariableV(p, &V[11], "11", 0, 0.0, CompVal, 1, &V[9]);
+	DdsAddVariableV(p, &V[12], "12", 0, 0.0, CompVal, 1, &V[11]);
+
+	for (i = 0; i < NV1; ++i) {
+		pV = DdsRhsvs(&nr, V[i]);
+		for (j = 0; j < nr; ++j) {
+			pV[j] = *((DDS_VARIABLE*)pV[j]);
+		}
+	}
+	DdsUserFlagOn(V[0], DDS_FLAG_REQUIRED);
+	DdsCompileGraph(p);
+	DdsDeleteProcessor(&p);
+	getchar();
+}
+
 void Test2()
 {
 	/* X0 1 2 3 4 5 6 7
@@ -170,7 +206,6 @@ void Test2_2()
 }
 
 
-
 void Test3()
 {
 	DDS_VARIABLE v1, v2, v3, v4, v5, v6, v7, v8;
@@ -256,16 +291,40 @@ void Test3_1()
 }
 
 
+void Test0()
+{
+	printf("=== Test0()---\n");
+	DDS_PROCESSOR p;
+	DDS_VARIABLE v[7],F,T;
+	DdsCreateProcessor(&p, 5);
+
+	DdsAddVariableV(p, &v[0], "0", 0, 0.0, NULL, 0);
+	DdsAddVariableV(p, &v[1], "1", DDS_FLAG_SET, 0.0, CompVal, 1,v[0]);
+	DdsAddVariableV(p, &F, "F", 0, 0.0, NULL, 0);
+	DdsAddVariableV(p, &v[2], "2", 0, 0.0, CompVal, 2, v[1],F);
+	DdsAddVariableV(p, &v[3], "3", 0, 0.0, CompVal, 1, v[2]);
+	DdsAddVariableV(p, &v[4], "4", DDS_FLAG_REQUIRED, 0.0, CompVal, 1, v[3]);
+	DdsAddVariableV(p, &T, "T", DDS_FLAG_TARGETED, 0.0, CompVal, 1,v[2]);
+
+	DdsCompileGraph(p);
+	DdsDeleteProcessor(&p);
+	getchar();
+}
+
+
 void Test()
 {
-	Test2_2();
+	Test0();
 	return;
+/*
 	Test1();
+	Test1_1();
 	Test2();
 	Test2_1();
 	Test2_2();
 	Test3();
 	Test3_1();
+*/
 }
 
 int main()

@@ -22,8 +22,11 @@ static void HeapSort(DdsProcessor* p);
 //  On exit:
 //      TV(i) and F_PIRED(i) are sorted in computation(block) order.
 //      INDEX(<T>),INDEX(<F>) point the array index i of TV(i) and F_PAIRED(i).
-//      SCORE(<T>),SCORE(<F>) have block number that belong to.
-//      B_COUNT() ... total number of block.
+//      SCORE(<T>),SCORE(<F>) have block number(=block index+1) that belong to.
+//      SCORE(<X>),<X> is any variable other than <F> or <T>,is -1 if <X> is not on any
+//                 <F>-<T> block. 
+//                 The value other than -1 means the variable is on the block of <T>(SCORE(<X>)==SCORE(<T>)).
+//      B_COUNT() ... total number of blocks.
 //      B_SIZE(i) ... the size of i-th block.
 //
 EXPORT(int) DdsCheckRouteFT(DDS_PROCESSOR ph)
@@ -36,7 +39,8 @@ EXPORT(int) DdsCheckRouteFT(DDS_PROCESSOR ph)
 	T_COUNT() = 0;
 	for (int i = 0; i < cv; ++i) {
 		DdsVariable* pv = VARIABLE(i);
-		if (IS_ALIVE(pv) && IS_TARGETED(pv)) ++T_COUNT(); // count <T> first.
+		if (IS_ALIVE(pv) && IS_TARGETED(pv)  ) ++T_COUNT(); // count <T>
+		if (IS_ALIVE(pv) && IS_INTEGRATED(pv)) ++I_COUNT(); // count <I>
 	}
 	TRACE_EX(("DdsCheckRouteFT(): <T>s=%d",T_COUNT()));
 	if (T_COUNT() <= 0) return 0; // nothing to do here!
@@ -329,6 +333,34 @@ EXPORT(int) DdsCheckRouteFT(DDS_PROCESSOR ph)
 		SCORE(F_PAIRED(i)) = SCORE(TV(i));
 	}
 	B_COUNT() = nb;
+
+	//
+	// Put SCORE(<T>) to every variables on the route.
+	for (int i = 0; i < cv; ++i) {
+		DdsVariable* pv = VARIABLE(i);
+		if (IS_ALIVE(pv) && IS_SFLAG_OR(pv, DDS_FLAG_TARGETED | DDS_SFLAG_FREE)) continue;
+		SCORE(pv) = -1;
+	}
+	for (int i = 0; i < T_COUNT(); ++i) {
+		DdsVariable* pv = TV(i);
+		ENABLE_BACKTRACK(DDS_FLAG_SET | DDS_SFLAG_FREE | DDS_FLAG_INTEGRATED);
+		STACK_CLEAR();
+		PUSH(nullptr);
+		PUSH(pv);
+		int label = SCORE(pv);
+		SET_SFLAG_ON(F_CONNECTED(i, 0), DDS_SFLAG_CHECKED);
+		while ((pv = PEEK()) != nullptr) {
+			MOVE_BACK(pv, DDS_FLAG_SET | DDS_FLAG_INTEGRATED | DDS_FLAG_TARGETED);
+			if (INDEX(pv) < 0) { POP_F(); continue; }
+			DdsVariable* rv = RHSV(pv, INDEX(pv));
+			if (IS_FREE(rv) && label == SCORE(rv)) {
+				int ix = STACK_SIZE();
+				while (--ix > 1) SCORE(STACK_ELEMENT(ix)) = label;
+			} else {
+				PUSH(rv);
+			}
+		}
+	}
 
 #ifdef _DEBUG
 	printf("BLOCKS:");

@@ -12,9 +12,6 @@
 #include "ddsl.h"
 #include "debug.h"
 
-#define ENTER(h)   DdsProcessor*p;try{p=(DdsProcessor*)h; STATUS()=0;
-#define LEAVE(h)   } catch(Exception& ex) {return STATUS()=ex.Code;}\
-                     catch (...) { TRACE_EX(("DdsAddVariableA() aborted")); return STATUS()=DDS_ERROR_SYSTEM;}
 
  // For DdsProcessor
 #define VARIABLE_COUNT()    ((p)->v_count)
@@ -27,6 +24,9 @@
 #define TV(i)               (TVs()[i])
 #define B_COUNT()           ((p)->b_count)
 #define B_SIZE(i)           ((p)->f_max[i])   // re-use array (f_max is no more used after block-decomposition)
+#define I_COUNT()           ((p)->i_count)
+#define IVs()               ((p)->Is)
+#define IV(i)               (IVs()[i])
 
 #define F_COUNTs()          ((p)->f_count)
 #define F_COUNT(i)          (F_COUNTs()[i])
@@ -36,6 +36,9 @@
 #define Fs_CONNECTED(i)     (FT_MATRIX()[i])
 #define F_CONNECTED(i,j)    (Fs_CONNECTED(i)[j])
 #define F_PAIRED(i)         (Fs_CONNECTED(i)[0])
+// List of the computation order
+#define V_TOP()             ((p)->VFirst)
+#define V_END()             ((p)->VEnd)
 
 
 // For DdsVariable
@@ -52,7 +55,7 @@
 #define SCORE(v)      ((v)->score)
 #define NEXT(v)       ((v)->next)
 #define INDEX(v)      ((v)->index)
-#define RHSV_COUNT(v) ((v)->Nr)
+#define RHSV_COUNT(v) (IS_SFLAG_OR((v),DDS_FLAG_SET|DDS_SFLAG_FREE)?0:(v)->Nr)
 #define RHSVs(v)      ((v)->Rhsvs)
 #define RHSV(v,i)     (RHSVs(v)[i])
 #define VALUE(v)      ((v)->Value)
@@ -70,6 +73,7 @@
 #define IS_STACKED(v)       IS_SFLAG_OR(v,DDS_SFLAG_STACKED)
 #define IS_DIVISIBLE(v)     IS_SFLAG_OR(v,DDS_FLAG_DIVISIBLE)
 #define IS_NDIVISIBLE(v)    IS_SFLAG_OR(v,DDS_FLAG_NON_DIVISIBLE)
+#define IS_DERIVATIVE(v)    IS_SFLAG_OR(v,DDS_SFLAG_DERIVATIVE)
 
 // f is an exception flag (any bit of f is on,then returns 0 or do nothing.
 #define BACKWAY_COUNT(v,f)    (IS_SFLAG_OR(v, f) ? 0 : RHSV_COUNT(v))
@@ -86,6 +90,11 @@
 #define STACK_CLEAR()    stack.clear()
 #define STACK_SIZE()     ((int)stack.size())
 #define STACK_ELEMENT(i) stack[i]
+
+#define ENTER(h)   DdsProcessor*p;try{p=(DdsProcessor*)h; STATUS()=0;
+#define LEAVE(h)   } catch(Exception& ex) {return STATUS()=ex.Code;}\
+                     catch (...) { TRACE_EX(("Aborted by unexpected error!")); return STATUS()=DDS_ERROR_SYSTEM;}
+
 
 using namespace std;
 

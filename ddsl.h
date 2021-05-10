@@ -77,20 +77,27 @@ typedef struct PROCESSOR {
 #else
 typedef struct {
 #endif
+		int           status;  /* status of function call */
+		/* changed at DdsAddVariableV/A() stage */
 		DdsVariable** Vars;    /* Variables registered  */
 		int           v_count; /* Total number of variables registered to Vars[] */
 		int           v_max;   /* Size of the Vars[] */
-		int           status;  /* status of function call */
 
 		/* Arrays dynamically allocated during the processing. */
-		DdsVariable**  Ts; /* Allocated by DdsCheckRouteFT() */
+		/* Allocated and changed by DdsCheckRouteFT() */
+		DdsVariable**  Ts;      /* <T>s */
 		int            t_count; /* number of <T>s effective */
 		DdsVariable*** Fs;      /* Fs[i][0] is paired <F> with <T>[i],other Fs[i][] are <F>s connected. */
 		int*           f_count; /* f_count[i] is the count of <F>s connected to <T>[i]. */
 		int*           f_max;   /* f_max[i] is the max size of Fs[i][...]*/
-
 		int           *b_size;  /* size of each block */
 		int            b_count; /* total number of blocks. */
+		DdsVariable**  Is;      /* <I>s */
+		int            i_count; /* the size of Is[] */
+
+		/* changed by DdsBuildSequence() */
+		DdsVariable*  VFirst;
+		DdsVariable*  VEnd;
 } DdsProcessor;
 
 /*
@@ -177,6 +184,7 @@ EXPORT(void)          DdsDbgPrintF(FILE* f, const char* title, DDS_PROCESSOR p);
 EXPORT(int)           DdsSieveVariable(DDS_PROCESSOR ph);
 EXPORT(int)           DdsDivideLoop(DDS_PROCESSOR ph);
 EXPORT(int)           DdsCheckRouteFT(DDS_PROCESSOR ph);
+EXPORT(int)           DdsBuildSequence(DDS_PROCESSOR ph);
 
 EXPORT(DDS_VARIABLE*) DdsVariables(int* nv, DDS_PROCESSOR p);
 EXPORT(DDS_VARIABLE*) DdsRhsvs(int* nr, DDS_VARIABLE v);

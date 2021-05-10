@@ -100,7 +100,7 @@ EXPORT(int) DdsDivideLoop(DDS_PROCESSOR ph)
 		SET_SFLAG_ON(v_divided, DDS_SFLAG_FREE | DDS_SFLAG_DIVIDED | DDS_SFLAG_CHECKED);
 
 		//
-		// create 1 variable and set <T>.
+		// create 1 more variable and set it to be <T>.
 		//
 		int e = DdsAddVariableA(p, &pv, NAME(v_divided),USER_FLAG(v_divided),VALUE(v_divided),FUNCTION(v_divided),RHSV_COUNT(v_divided), (DDS_VARIABLE**)RHSVs(v_divided));
 		if (e != 0) THROW(e, "Can not divide a variable (or create a new variable) in DdsDivideLoop()");
