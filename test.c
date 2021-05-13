@@ -293,18 +293,41 @@ void Test3_1()
 
 void Test0()
 {
-	printf("=== Test0()---\n");
 	DDS_PROCESSOR p;
-	DDS_VARIABLE v[7],F,T;
+	int nr;
+	DDS_VARIABLE* pV;
+	DDS_VARIABLE f1, f2, f3, x1, x2, x3, t1, t2, t3;
+	DDS_VARIABLE c0, c12, c23, c3;
+	DDS_VARIABLE I, DE,I2,DE2;
+
+	printf("=== Test0()---\n");
 	DdsCreateProcessor(&p, 5);
 
-	DdsAddVariableV(p, &v[0], "0", 0, 0.0, NULL, 0);
-	DdsAddVariableV(p, &v[1], "1", DDS_FLAG_SET, 0.0, CompVal, 1,v[0]);
-	DdsAddVariableV(p, &F, "F", 0, 0.0, NULL, 0);
-	DdsAddVariableV(p, &v[2], "2", 0, 0.0, CompVal, 2, v[1],F);
-	DdsAddVariableV(p, &v[3], "3", 0, 0.0, CompVal, 1, v[2]);
-	DdsAddVariableV(p, &v[4], "4", DDS_FLAG_REQUIRED, 0.0, CompVal, 1, v[3]);
-	DdsAddVariableV(p, &T, "T", DDS_FLAG_TARGETED, 0.0, CompVal, 1,v[2]);
+	DdsAddVariableV(p, &c0, "c0", DDS_FLAG_SET|DDS_FLAG_VOLATILE, 0.0, NULL, 0);
+	DdsAddVariableV(p, &f1, "f1", 0, 0.0, NULL, 0);
+	DdsAddVariableV(p, &f2, "f2", 0, 0.0, NULL, 0);
+	DdsAddVariableV(p, &f3, "f3", 0, 0.0, NULL, 0);
+	DdsAddVariableV(p, &x1, "x1", 0, 0.0, CompVal, 2, f1,c0);
+	DdsAddVariableV(p, &t1, "t1", DDS_FLAG_TARGETED, 0.0, CompVal, 1, x1);
+
+	DdsAddVariableV(p, &I, "I", DDS_FLAG_INTEGRATED, 0.0, NULL, 1, &DE);
+	DdsAddVariableV(p, &c12, "c12", 0, 0.0, CompVal, 2, I,x1);
+	DdsAddVariableV(p, &x2, "x2", 0, 0.0, CompVal, 2, f2, c12);
+	DdsAddVariableV(p, &t2, "t2", DDS_FLAG_TARGETED, 0.0, CompVal, 1, x2);
+	DdsAddVariableV(p, &DE, "DE", 0, 0.0, CompVal, 1, c12);
+
+	DdsAddVariableV(p, &I2, "I2", DDS_FLAG_INTEGRATED, 0.0, NULL, 1, &DE2);
+	DdsAddVariableV(p, &x3, "x3", 0, 0.0, CompVal, 2, f3,I2);
+	DdsAddVariableV(p, &c3, "c3", DDS_FLAG_REQUIRED, 0.0, CompVal, 1, x3);
+	DdsAddVariableV(p, &c23, "c23", DDS_FLAG_REQUIRED, 0.0, CompVal, 2, x2, x3);
+	DdsAddVariableV(p, &t3, "t3", DDS_FLAG_TARGETED, 0.0, CompVal, 1, x3);
+	DdsAddVariableV(p, &DE2, "DE2", 0, 0.0, CompVal, 1, x3);
+
+
+	pV = DdsRhsvs(&nr, I);
+	pV[0] = *((DDS_VARIABLE*)pV[0]);
+	pV = DdsRhsvs(&nr, I2);
+	pV[0] = *((DDS_VARIABLE*)pV[0]);
 
 	DdsCompileGraph(p);
 	DdsDeleteProcessor(&p);

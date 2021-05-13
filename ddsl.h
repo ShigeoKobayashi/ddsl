@@ -95,9 +95,13 @@ typedef struct {
 		DdsVariable**  Is;      /* <I>s */
 		int            i_count; /* the size of Is[] */
 
-		/* changed by DdsBuildSequence() */
-		DdsVariable*  VFirst;
-		DdsVariable*  VEnd;
+		/* changed by DdsBuildSequence(): Sequence list */
+		DdsVariable*  VTopOnceT;
+		DdsVariable*  VEndOnceT;
+		DdsVariable*  VTopAnyT;
+		DdsVariable*  VEndAnyT;
+		DdsVariable*  VTopEveryT;
+		DdsVariable*  VEndEveryT;
 } DdsProcessor;
 
 /*

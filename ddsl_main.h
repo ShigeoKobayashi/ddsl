@@ -24,7 +24,7 @@
 #define TV(i)               (TVs()[i])
 #define B_COUNT()           ((p)->b_count)
 #define B_SIZE(i)           ((p)->f_max[i])   // re-use array (f_max is no more used after block-decomposition)
-#define I_COUNT()           ((p)->i_count)
+#define I_COUNT()           ((p)->i_count)    // <I> count
 #define IVs()               ((p)->Is)
 #define IV(i)               (IVs()[i])
 
@@ -37,9 +37,12 @@
 #define F_CONNECTED(i,j)    (Fs_CONNECTED(i)[j])
 #define F_PAIRED(i)         (Fs_CONNECTED(i)[0])
 // List of the computation order
-#define V_TOP()             ((p)->VFirst)
-#define V_END()             ((p)->VEnd)
-
+#define V_TOP_ONCET()       ((p)->VTopOnceT)
+#define V_END_ONCET()       ((p)->VEndOnceT)
+#define V_TOP_ANYT()        ((p)->VTopAnyT)
+#define V_END_ANYT()        ((p)->VEndAnyT)
+#define V_TOP_EVERYT()      ((p)->VTopEveryT)
+#define V_END_EVERYT()      ((p)->VEndEveryT)
 
 // For DdsVariable
 #define USER_FLAG(v)        ((v)->UFlag)
