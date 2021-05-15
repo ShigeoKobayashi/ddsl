@@ -83,7 +83,7 @@ void Test2()
 		0 0 0 0 0 1 0 1  x2 y2         A1 0 0 1 1 1 0 0 0  x7 y4
 		0 0 0 1 1 0 0 0  x3 y3         A1 0 0 1 1 1 0 0 0  x2 y6
 	 A  0 1 1 0 0 0 0 1  x4 y4   ==>   A1 0 0 1 1 1 0 0 0  x1 y7
-		0 0 0 1 1 0 0 0  x5 y5         A2 0 0 1 0 0 1 0 0  x5 y2
+		0 0 0 1 1 0 0 0  x5 y5         A2 0 0 1 0 0 1 0 0  x5 y2 <V>
 		0 1 1 0 0 0 0 1  x6 y6         A3 0 1 1 0 0 0 1 1  x6 y0
 		0 1 1 0 0 0 0 1  x7 y7         A3 0 0 1 0 0 1 1 1  x0 y1
 	*/
@@ -104,7 +104,7 @@ void Test2()
 	name[1] = '0';
 	DdsAddVariableV(p, &Y[0], name, DDS_FLAG_TARGETED, 0.0, CompVal, 4, X[0], X[3], X[6], X[7]); name[1] += 1;
 	DdsAddVariableV(p, &Y[1], name, DDS_FLAG_TARGETED, 0.0, CompVal, 4, X[0], X[5], X[6], X[7]); name[1] += 1;
-	DdsAddVariableV(p, &Y[2], name, DDS_FLAG_TARGETED, 0.0, CompVal, 2, X[5], X[7]); name[1] += 1;
+	DdsAddVariableV(p, &Y[2], name, DDS_FLAG_TARGETED|DDS_FLAG_VOLATILE, 0.0, CompVal, 2, X[5], X[7]); name[1] += 1;
 	DdsAddVariableV(p, &Y[3], name, DDS_FLAG_TARGETED, 0.0, CompVal, 2, X[3], X[4]); name[1] += 1;
 	DdsAddVariableV(p, &Y[4], name, DDS_FLAG_TARGETED, 0.0, CompVal, 3, X[1], X[2], X[7]); name[1] += 1;
 	DdsAddVariableV(p, &Y[5], name, DDS_FLAG_TARGETED, 0.0, CompVal, 2, X[3], X[4]); name[1] += 1;
@@ -297,7 +297,7 @@ void Test0()
 	int nr;
 	DDS_VARIABLE* pV;
 	DDS_VARIABLE f1, f2, f3, x1, x2, x3, t1, t2, t3;
-	DDS_VARIABLE c0, c12, c23, c3;
+	DDS_VARIABLE c0, c1,c12, c23, c3;
 	DDS_VARIABLE I, DE,I2,DE2;
 
 	printf("=== Test0()---\n");
@@ -308,7 +308,8 @@ void Test0()
 	DdsAddVariableV(p, &f2, "f2", 0, 0.0, NULL, 0);
 	DdsAddVariableV(p, &f3, "f3", 0, 0.0, NULL, 0);
 	DdsAddVariableV(p, &x1, "x1", 0, 0.0, CompVal, 2, f1,c0);
-	DdsAddVariableV(p, &t1, "t1", DDS_FLAG_TARGETED, 0.0, CompVal, 1, x1);
+	DdsAddVariableV(p, &t1, "t1", DDS_FLAG_TARGETED|DDS_FLAG_VOLATILE, 0.0, CompVal, 1, x1);
+	DdsAddVariableV(p, &c1, "c1", DDS_FLAG_REQUIRED, 0.0, CompVal, 1, t1);
 
 	DdsAddVariableV(p, &I, "I", DDS_FLAG_INTEGRATED, 0.0, NULL, 1, &DE);
 	DdsAddVariableV(p, &c12, "c12", 0, 0.0, CompVal, 2, I,x1);
@@ -337,7 +338,7 @@ void Test0()
 
 void Test()
 {
-	Test0();
+	Test2();
 	return;
 /*
 	Test1();

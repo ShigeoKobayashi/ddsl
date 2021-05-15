@@ -33,10 +33,10 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 	int n_volatile = 0; // <V> counter
 	int block      = 0; // block label
 	int ni         = 0; // <I> counter
+	bool retry     = false;
 
-	auto REGISTER = [&cv, &p](DdsVariable*& v_from, DdsVariable*& v_to, unsigned int f) {
+	auto REGISTER = [&cv, &p,&retry](DdsVariable*& v_from, DdsVariable*& v_to, unsigned int f) {
 		int j, nr;
-		bool retry = false;
 		do { retry = false;
 			for (int i = 0; i < cv; ++i) {
 				DdsVariable* pv = VARIABLE(i);
@@ -56,7 +56,7 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 		} while (retry);
 	};
 
-	auto REGISTER_BLOCK = [&cv, &p,&REGISTER](DdsVariable*& v_from, DdsVariable*& v_to,int block, unsigned int f) {
+	auto REGISTER_BLOCK = [&cv, &p,&retry,&REGISTER](DdsVariable*& v_from, DdsVariable*& v_to,int block, unsigned int f) {
 		for (int i = 0; i < T_COUNT(); ++i) {
 			if (block != SCORE(TV(i))) continue;
 			// register <F>s in the specified block first.
@@ -72,7 +72,6 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 			SET_SFLAG_ON(v_to,DDS_SFLAG_CHECKED);
 		}
 		int j, nr;
-		bool retry = false;
 		do {
 			retry = false;
 			for (int i = 0; i < cv; ++i) {
@@ -188,6 +187,42 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 				else PUSH(RHSV(pv, INDEX(pv)));
 			}
 		}
+		// Back track from non-checked variable to any <ET>/<AT> variable, and set DDS_COMPUTED_ANY_TIME to variables on the route.
+		do {
+			retry = false;
+			ENABLE_BACKTRACK(DDS_FLAG_SET | DDS_SFLAG_FREE | DDS_FLAG_INTEGRATED);
+			for (int i = 0; i < cv; ++i) {
+				DdsVariable* pv = VARIABLE(i);
+				if (!IS_ALIVE(pv)) continue;
+				if (IS_SFLAG_OR(pv, DDS_COMPUTED_EVERY_TIME)) continue;
+				if (IS_SFLAG_OR(pv, DDS_COMPUTED_ANY_TIME)) continue;
+				STACK_CLEAR();
+				PUSH(nullptr);
+				PUSH(pv);
+				while ((pv = PEEK()) != nullptr) {
+					if (IS_SFLAG_OR(pv, DDS_FLAG_VOLATILE | DDS_COMPUTED_EVERY_TIME | DDS_COMPUTED_ANY_TIME)) {
+						int ix = STACK_SIZE() - 1;
+						retry = true;
+						while (--ix > 0) {
+							if (IS_SFLAG_OR(STACK_ELEMENT(ix), DDS_COMPUTED_ANY_TIME)) break;
+							SET_SFLAG_ON(STACK_ELEMENT(ix), DDS_COMPUTED_ANY_TIME);
+							block = SCORE(STACK_ELEMENT(ix));
+							if (block > 0) {
+								for (int jj = 0; jj < T_COUNT(); ++jj) {
+									if (SCORE(TV(jj)) == block) {
+										SET_SFLAG_ON(TV(jj), DDS_COMPUTED_ANY_TIME);
+										SET_SFLAG_ON(F_PAIRED(jj), DDS_COMPUTED_ANY_TIME);
+									}
+								}
+							}
+						}
+					}
+					MOVE_BACK(pv, 0);
+					if (INDEX(pv) < 0) POP();
+					else PUSH(RHSV(pv, INDEX(pv)));
+				}
+			}
+		} while (retry);
 	}
 #ifdef _DEBUG
 	DdsDbgPrintF(stdout, "== DdsBuildSequence(p): after flagging:", p);
