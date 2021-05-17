@@ -6,6 +6,14 @@
  *
  */
 
+/* References:
+  Masao Iri, Junkichi Tsunekawa, Keiji Yajima:The Graphical Techniques Used for a Chemical Process Simulator "JUSE GIFS". IFIP Congress
+  Dr. Kazuo Murota (auth.):Systems Analysis by Graphs and Matroids: Structural Solvability and Controllability
+(https://jp1lib.org/book/2264352/362f6b?id=2264352&secret=362f6b)
+ K.Yajima, J.Tsunekawaand S.Kobayashi(1981) : On equation - based dynamic simulation.Proc. 2nd World Congr.Chemical ~, Montreal, y.
+ K.Yajima, J.Tsunekawa, H.Shono, S.Kobayashi and D.J.Sebastian (1982) : On graph - theoretic techniques for large - scale process systems.Int.Symp.Process Syst.Engin., Kyoto, August 1982.
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

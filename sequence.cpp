@@ -15,7 +15,16 @@
 #include "utils.h"
 #include "debug.h"
 
+//
 // Sets DDS_SFLAG_DERIVATIVE if it is the RHSV of <I>.
+// and defines computing sequence of each variable as follows:
+// 
+//   from V_TOP_ONCET() to V_END_ONCET() is a linked list of variables computed at ONCE at the beginning.
+//        v = V_TOP_ONCET() is comouted first, then v = NEXTv) ,..., to V_END_ONCET()
+//   then V_TOP_ANYT()  to V_END_ANYT(), for the variables computed at every integration step.
+//   finally,
+//        V_TOP_EVERYT() to V_END_EVERYT() at anytime(is not computed at every integration steps,but is time dependent).
+//
 EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 {
 	ENTER(ph);
@@ -91,7 +100,7 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 				}
 			}
 		} while (retry);
-		// finally register <T>
+		// finally register <T>(because <T> is already CHECKED before called!)
 		for (int i = 0; i < T_COUNT(); ++i) {
 			DdsVariable* pv = TV(i);
 			if (SCORE(pv) != block) continue;
@@ -217,7 +226,7 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 							}
 						}
 					}
-					MOVE_BACK(pv, 0);
+					MOVE_BACK(pv, DDS_FLAG_SET);
 					if (INDEX(pv) < 0) POP();
 					else PUSH(RHSV(pv, INDEX(pv)));
 				}
@@ -233,6 +242,7 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 	// then block
 	for (int i = 0; i < T_COUNT(); ++i) {
 		if (IS_SFLAG_OR(F_PAIRED(i), DDS_COMPUTED_ANY_TIME | DDS_COMPUTED_EVERY_TIME)) continue;
+		if (IS_CHECKED(F_PAIRED(i))                                                  ) continue;
 		block = SCORE(F_PAIRED(i));
 		for (int j = i; j < T_COUNT(); ++j) {
 			if (SCORE(F_PAIRED(i)) == block) SET_SFLAG_ON(F_PAIRED(i), DDS_COMPUTED_ONCE|DDS_SFLAG_CHECKED);
@@ -255,6 +265,7 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 		// then block
 		for (int i = 0; i < T_COUNT(); ++i) {
 			if (!IS_SFLAG_OR(F_PAIRED(i), DDS_COMPUTED_EVERY_TIME)) continue;
+			if ( IS_CHECKED(F_PAIRED(i))                          ) continue;
 			block = SCORE(F_PAIRED(i));
 			for (int j = i; j < T_COUNT(); ++j) {
 				if (SCORE(F_PAIRED(i)) == block) SET_SFLAG_ON(F_PAIRED(i), DDS_SFLAG_CHECKED);
@@ -274,6 +285,7 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 		// then block
 		for (int i = 0; i < T_COUNT(); ++i) {
 			if (!IS_SFLAG_OR(F_PAIRED(i), DDS_COMPUTED_ANY_TIME)) continue;
+			if ( IS_CHECKED(F_PAIRED(i))                        ) continue;
 			block = SCORE(F_PAIRED(i));
 			for (int j = i; j < T_COUNT(); ++j) {
 				if (SCORE(F_PAIRED(i)) == block) SET_SFLAG_ON(F_PAIRED(i), DDS_SFLAG_CHECKED);
