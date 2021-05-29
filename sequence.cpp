@@ -29,7 +29,7 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 {
 	ENTER(ph);
 	int cv = VARIABLE_COUNT();
-	STACK(cv + 1);
+	STACK(cv/2);
 
 	V_TOP_ONCET()  = nullptr;
 	V_END_ONCET()  = nullptr;
@@ -89,7 +89,9 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 				if (SCORE(pv)!=block          ) continue;
 				if (!IS_SFLAG_OR(pv, f)       ) continue;
 				if ((nr = RHSV_COUNT(pv)) <= 0) continue;
-				for (j = 0; j < nr; ++j) if (!IS_CHECKED(RHSV(pv, j))) break;
+				for (j = 0; j < nr; ++j) {
+					if (!IS_CHECKED(RHSV(pv, j))) break;
+				}
 				if (j < nr) continue;
 				SET_SFLAG_ON(pv, DDS_SFLAG_CHECKED | f);
 				retry = true;
@@ -101,6 +103,7 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 			}
 		} while (retry);
 		// finally register <T>(because <T> is already CHECKED before called!)
+		// registering order is that of TV() order.
 		for (int i = 0; i < T_COUNT(); ++i) {
 			DdsVariable* pv = TV(i);
 			if (SCORE(pv) != block) continue;
@@ -139,6 +142,31 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 	//
 	if (n_volatile > 0) {
 		// 
+		// Back track non-checked <T> to <V> and set DDS_COMPUTED_ANY_TIME to variables on the route.
+		for (int i = 0; i < T_COUNT(); ++i) {
+			DdsVariable* pv = TV(i);
+			STACK_CLEAR();
+			PUSH(nullptr);
+			PUSH(pv);
+			block = SCORE(pv);
+			ENABLE_BACKTRACK(DDS_FLAG_SET | DDS_SFLAG_FREE | DDS_FLAG_INTEGRATED);
+			while ((pv = PEEK()) != nullptr) {
+				if (IS_SFLAG_OR(pv, DDS_FLAG_VOLATILE)) {
+					SET_SFLAG_ON(pv, DDS_COMPUTED_ANY_TIME);
+					int ix = STACK_SIZE();
+					while (--ix > 0) {
+						SET_SFLAG_ON(STACK_ELEMENT(ix), DDS_COMPUTED_ANY_TIME);
+					}
+					for (int j = 0; j < cv; ++j) {
+						if (SCORE(VARIABLE(j)) == block) SET_SFLAG_ON(VARIABLE(j), DDS_COMPUTED_ANY_TIME);
+					}
+				}
+				MOVE_BACK(pv, DDS_SFLAG_FREE);
+				if (INDEX(pv) < 0) POP();
+				else PUSH(RHSV(pv, INDEX(pv)));
+			}
+		}
+		// 
 		// Back track from <DE> to <V>(including <I>) and set DDS_COMPUTED_EVERY_TIME to the variables on the route.
 		for (int i = 0; i < I_COUNT(); ++i) {
 			DdsVariable* pv = RHSV(IV(i), 0);
@@ -164,10 +192,40 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 							}
 						}
 					}
+				} else if (IS_SFLAG_OR(pv, DDS_COMPUTED_ANY_TIME)) {
+					// pv is on the <T>-<V> route
+					block = SCORE(pv);
+					if (block > 0) {
+						for (int j = 0; j < cv; ++j) {
+							if (SCORE(VARIABLE(j)) == block) SET_SFLAG_ON(VARIABLE(j), DDS_COMPUTED_EVERY_TIME);
+						}
+					}
 				}
 				MOVE_BACK(pv, DDS_SFLAG_FREE);
 				if (INDEX(pv) < 0) POP();
 				else               PUSH(RHSV(pv, INDEX(pv)));
+			}
+		}
+		// 
+		// Back track from EVERY_TIME <T> to <V> and set DDS_COMPUTED_EVERY_TIME to variables on the route.
+		for (int i = 0; i < T_COUNT(); ++i) {
+			DdsVariable* pv = TV(i);
+			if (!IS_SFLAG_OR(pv, DDS_COMPUTED_EVERY_TIME)) continue;
+			STACK_CLEAR();
+			PUSH(nullptr);
+			PUSH(pv);
+			ENABLE_BACKTRACK(DDS_FLAG_SET | DDS_SFLAG_FREE | DDS_FLAG_INTEGRATED);
+			while ((pv = PEEK()) != nullptr) {
+				if (IS_SFLAG_OR(pv, DDS_FLAG_VOLATILE)) {
+					int ix = STACK_SIZE();
+					while (--ix > 0) {
+						if (IS_SFLAG_OR(STACK_ELEMENT(ix), DDS_COMPUTED_EVERY_TIME)) break;
+						SET_SFLAG_ON(STACK_ELEMENT(ix), DDS_COMPUTED_EVERY_TIME);
+					}
+				}
+				MOVE_BACK(pv, DDS_SFLAG_FREE);
+				if (INDEX(pv) < 0) POP();
+				else PUSH(RHSV(pv, INDEX(pv)));
 			}
 		}
 		// 
@@ -248,8 +306,6 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 			if (SCORE(F_PAIRED(i)) == block) SET_SFLAG_ON(F_PAIRED(i), DDS_COMPUTED_ONCE|DDS_SFLAG_CHECKED);
 		}
 		REGISTER_BLOCK(V_TOP_ONCET(), V_END_ONCET(), block, DDS_SFLAG_ALIVE|DDS_COMPUTED_ONCE);
-	}
-	if (T_COUNT() > 0) {
 		REGISTER(V_TOP_ONCET(), V_END_ONCET(), DDS_SFLAG_ALIVE | DDS_COMPUTED_ONCE);
 	}
 
@@ -271,8 +327,8 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 				if (SCORE(F_PAIRED(i)) == block) SET_SFLAG_ON(F_PAIRED(i), DDS_SFLAG_CHECKED);
 			}
 			REGISTER_BLOCK(V_TOP_EVERYT(), V_END_EVERYT(), block, DDS_COMPUTED_EVERY_TIME);
+			REGISTER(V_TOP_EVERYT(), V_END_EVERYT(), DDS_COMPUTED_EVERY_TIME);
 		}
-		REGISTER(V_TOP_EVERYT(), V_END_EVERYT(), DDS_COMPUTED_EVERY_TIME);
 
 		// ======== ANY-TIME =========
 		for (int i = 0; i < cv; ++i) {
@@ -291,18 +347,27 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 				if (SCORE(F_PAIRED(i)) == block) SET_SFLAG_ON(F_PAIRED(i), DDS_SFLAG_CHECKED);
 			}
 			REGISTER_BLOCK(V_TOP_ANYT(), V_END_ANYT(), block, DDS_COMPUTED_ANY_TIME);
+			REGISTER(V_TOP_ANYT(), V_END_ANYT(), DDS_SFLAG_ALIVE | DDS_COMPUTED_ANY_TIME);
 		}
-		REGISTER(V_TOP_ANYT(), V_END_ANYT(), DDS_SFLAG_ALIVE | DDS_COMPUTED_ANY_TIME);
 	}
 	//
 	// 
 #ifdef _DEBUG
+	for (int i = 0; i < cv; ++i) {
+		DdsVariable* pv = VARIABLE(i);
+		if (IS_ALIVE(pv)) {
+			if (IS_SFLAG_OR(pv, DDS_FLAG_SET | DDS_FLAG_INTEGRATED)) continue;
+			SET_SFLAG_OFF(pv, DDS_SFLAG_CHECKED);
+		}
+	}
 	DdsVariable* pv = V_TOP_ONCET();
 	int ic = 0;
 	printf("\nONCE SEQUENCE      : ");
 	do {
 		if (pv == nullptr) break;
 		printf(" %d)%s ", ic++, NAME(pv));
+		ASSERT(!IS_CHECKED(pv));
+		SET_SFLAG_ON(pv, DDS_SFLAG_CHECKED);
 		pv = NEXT(pv);
 	} while (pv != nullptr);
 	pv = V_TOP_EVERYT();
@@ -311,6 +376,8 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 	do {
 		if (pv == nullptr) break;
 		printf(" %d)%s ", ic++, NAME(pv));
+		ASSERT(!IS_CHECKED(pv));
+		SET_SFLAG_ON(pv, DDS_SFLAG_CHECKED);
 		if (pv == V_END_EVERYT()) break;
 		pv = NEXT(pv);
 	} while (pv != nullptr);
@@ -320,6 +387,8 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 	do {
 		if (pv == nullptr) break;
 		printf(" %d)%s ", ic++, NAME(pv));
+		ASSERT(!IS_CHECKED(pv));
+		SET_SFLAG_ON(pv, DDS_SFLAG_CHECKED);
 		if (pv == V_END_ANYT()) break;
 		pv = NEXT(pv);
 	} while (pv != nullptr);

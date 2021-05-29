@@ -52,13 +52,14 @@ typedef struct VARIABLE {
 #else
 typedef struct {
 #endif
+	void*        UserPTR; /* just for user(DDSL never touch) */
 	char*        Name;
 	ComputeVal   Function;
 	double       Value;
 #ifdef __cplusplus
 	VARIABLE**   Rhsvs;
 #else
-	void** Rhsvs;
+	void**       Rhsvs;
 #endif
 	unsigned int UFlag;
 	unsigned int SFlag;
@@ -77,6 +78,7 @@ typedef struct PROCESSOR {
 #else
 typedef struct {
 #endif
+		void*         UserPTR; /* just for user(DDSL never touch) */
 		int           status;  /* status of function call */
 		/* changed at DdsAddVariableV/A() stage */
 		DdsVariable** Vars;    /* Variables registered  */
@@ -102,6 +104,18 @@ typedef struct {
 		DdsVariable*  VEndAnyT;
 		DdsVariable*  VTopEveryT;
 		DdsVariable*  VEndEveryT;
+
+		/* DdsComputeStatic() stage */
+		unsigned int  stage;
+		double*       jacobian;   /* Jacobian matrix (block base) */
+		double*       delta;      /* the results of SolveJacobian() in  Newton method. (block base)*/
+		double*       y_cur;      /* current value of <T>-value - value computed. (block base) */
+		double*       y_next;     /* next value of <T>-value - value computed. (block base) */
+		double*       x;          /* x(<F>s) before approximation(block base). */
+		double*       dx;         /* dx of dy/dx (total base) */
+		double*       scale;      /* scaling (used by LuDecomposition solving Jacobian) */
+		int*          pivot;      /* pivot index  (used by LuDecomposition solving Jacobian) */
+		double        eps;        /* convergence criteria */
 } DdsProcessor;
 
 /*
@@ -137,6 +151,7 @@ typedef DdsVariable*  DDS_VARIABLE;   /* Variable handle  */
 /* Processor flag */
 #define DDS_SFLAG_CHECKED      0x01000000  /* Checked> */
 #define DDS_SFLAG_STACKED      0x02000000  /* Stacked> */
+#define DDS_COMPUTED_ALL       0x04000000  /* Evrything computed> */
 #define DDS_PROC_MASK          0xFF000000  /* Mask */
 
 /* Flag manipulation macros */
@@ -167,6 +182,15 @@ typedef DdsVariable*  DDS_VARIABLE;   /* Variable handle  */
 #define DDS_ERROR_INDEX         -7 /* Invalid RHSV index.*/
 #define DDS_MSG_INDEX           "Invalid RHSV index."
 
+#define DDS_ERROR_COMPUTED      -8 /* Nothing to be computed.*/
+#define DDS_MSG_COMPUTED         "Nothing to be computed."
+
+#define DDS_ERROR_CONVERGENCE   -9 /* Unable to obtain convergence for solving non-linear equation system.*/
+#define DDS_MSG_CONVERGENCE     "Unable to obtain convergence for solving non-linear equation system."
+
+#define DDS_ERROR_JACOBIAN      -10 /* Singular Jacobian matrix. */
+#define DDS_MSG_JACOBIAN        "Singular Jacobian matrix."
+
 #define DDS_ERROR_SYSTEM        -999 /* Undefined c/c++ level error. */
 #define DDS_MSG_SYSTEM          "Undefined c/c++ level error."
 
@@ -189,6 +213,8 @@ EXPORT(int)           DdsSieveVariable(DDS_PROCESSOR ph);
 EXPORT(int)           DdsDivideLoop(DDS_PROCESSOR ph);
 EXPORT(int)           DdsCheckRouteFT(DDS_PROCESSOR ph);
 EXPORT(int)           DdsBuildSequence(DDS_PROCESSOR ph);
+
+EXPORT(int)           DdsComputeStatic(DDS_PROCESSOR ph);
 
 EXPORT(DDS_VARIABLE*) DdsVariables(int* nv, DDS_PROCESSOR p);
 EXPORT(DDS_VARIABLE*) DdsRhsvs(int* nr, DDS_VARIABLE v);

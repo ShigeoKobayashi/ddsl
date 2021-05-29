@@ -12,30 +12,46 @@
 #include "ddsl.h"
 #include "debug.h"
 
-
  // For DdsProcessor
-#define VARIABLE_COUNT()    ((p)->v_count)
-#define VARIABLEs()         ((p)->Vars)
-#define VARIABLE(i)         (VARIABLEs()[i])
-#define STATUS()            ((p)->status)
+#define VARIABLE_COUNT()    ((p)->v_count)    // number of the total variables registered.
+#define VARIABLEs()         ((p)->Vars)       // array of the registered variables registered.
+#define VARIABLE(i)         (VARIABLEs()[i])  // i-th variable registered.
+#define STATUS()            ((p)->status)     // final status of eache function call.
+#define JACOBIAN_MATRIX()   ((p)->jacobian)   // Jacobian matrix for solving system of non-linear equations.
+#define T_VALUEs()          ((p)->t_computed)
+#define T_VALUE(i)          ((T_VALUEs())[i])
+#define DELTAs()            ((p)->delta)
+#define DELTA(i)            ((DELTAs())[i])  // next increment each Newton step (block base).
+#define Ys()                ((p)->y_cur)     // current value of <T>-value - value computed. (block base) 
+#define Y_NEXTs()           ((p)->y_next)    // next value of <T>-value - value computed. (block base)
+#define Y(i)                ((Ys())[i]) 
+#define Y_NEXT(i)           ((Y_NEXTs())[i])
+#define SCALE()             ((p)->scale)     // an array for scaling value used in LU decomposition
+#define PIVOT()             ((p)->pivot)     // for pivoting 
 
-#define T_COUNT()           ((p)->t_count)
-#define TVs()               ((p)->Ts)
-#define TV(i)               (TVs()[i])
-#define B_COUNT()           ((p)->b_count)
-#define B_SIZE(i)           ((p)->f_max[i])   // re-use array (f_max is no more used after block-decomposition)
+#define Xs()                ((p)->x)
+#define X(i)                ((Xs())[i])
+#define DXs()               ((p)->dx)
+#define DX(i)               ((DXs())[ix_top+i]) // total base dx
+#define EPS()               ((p)->eps)
+
+#define T_COUNT()           ((p)->t_count)    // Total number of <T>s registered.
+#define TVs()               ((p)->Ts)         // Array for all <T>s
+#define TV(i)               (TVs()[i])        // i-th <T> variable.
+#define B_COUNT()           ((p)->b_count)    // block count
+#define B_SIZE(i)           ((p)->f_max[i])   // size of i-th block(re-used array ,f_max is no more used after block-decomposition)
 #define I_COUNT()           ((p)->i_count)    // <I> count
-#define IVs()               ((p)->Is)
-#define IV(i)               (IVs()[i])
+#define IVs()               ((p)->Is)         // Array for all <I>s
+#define IV(i)               (IVs()[i])        // i-th <I> variable.
 
 #define F_COUNTs()          ((p)->f_count)
-#define F_COUNT(i)          (F_COUNTs()[i])
+#define F_COUNT(i)          (F_COUNTs()[i])   // number of <F>s connected to <T>[i]
 #define F_MAX_COUNTs()      ((p)->f_max)
-#define F_MAX_COUNT(i)      ((p)->f_max[i])
+#define F_MAX_COUNT(i)      ((p)->f_max[i])   // max-counter for <F>s connected to <T>[i] 
 #define FT_MATRIX()         ((p)->Fs)
 #define Fs_CONNECTED(i)     (FT_MATRIX()[i])
-#define F_CONNECTED(i,j)    (Fs_CONNECTED(i)[j])
-#define F_PAIRED(i)         (Fs_CONNECTED(i)[0])
+#define F_CONNECTED(i,j)    (Fs_CONNECTED(i)[j]) // j-th <F> connected to <T>[i]
+#define F_PAIRED(i)         (Fs_CONNECTED(i)[0]) // <F> paired with <T>[i]
 // List of the computation order
 #define V_TOP_ONCET()       ((p)->VTopOnceT)
 #define V_END_ONCET()       ((p)->VEndOnceT)
@@ -43,6 +59,7 @@
 #define V_END_ANYT()        ((p)->VEndAnyT)
 #define V_TOP_EVERYT()      ((p)->VTopEveryT)
 #define V_END_EVERYT()      ((p)->VEndEveryT)
+#define STAGE()             ((p)->stage)
 
 // For DdsVariable
 #define USER_FLAG(v)        ((v)->UFlag)

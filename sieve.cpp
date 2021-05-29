@@ -30,7 +30,17 @@ EXPORT(int) DdsSieveVariable(DDS_PROCESSOR ph)
 	ENTER(ph);
 	int cv = VARIABLE_COUNT();
 	bool retry = false;
-	STACK(cv+1);
+	STACK(cv/2);
+
+	// To-do:
+	//   Do not forget the case DdsSieveVariable(ph) called again.
+	//     1) restore <DD> variables.
+	//         <DD> has been flagged <F> and RHSV(<F>,0) is newly created <T>,
+	//         so restore RHSV(<F>,0) from RHSV(new <T>,0) and remove newly created <T>.
+	//     2) free arrays (working memories) allocated before.
+	//       ............................................
+
+	// check user flag and copy it to system flag.
 	{
 		// Check and copy user-flag to system-flag.
 		int ce = 0;

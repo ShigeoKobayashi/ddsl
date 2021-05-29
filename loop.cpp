@@ -27,7 +27,7 @@ EXPORT(int) DdsDivideLoop(DDS_PROCESSOR ph)
 	ENTER(ph);
 	bool retry = false;
 	int cv = VARIABLE_COUNT();
-	STACK(cv + 1);
+	STACK(cv/2);
 	for (int i = 0; i < cv; ++i) {
 		DdsVariable* pv = VARIABLE(i);
 		CLEAR_PROC_FLAG(pv);
@@ -97,16 +97,16 @@ EXPORT(int) DdsDivideLoop(DDS_PROCESSOR ph)
 		}
 		ASSERT(v_divided!=nullptr);
 		TRACE_EX((" --variable (%s) divided! ",NAME(v_divided)));
-		SET_SFLAG_ON(v_divided, DDS_SFLAG_FREE | DDS_SFLAG_DIVIDED | DDS_SFLAG_CHECKED);
 
 		//
 		// create 1 more variable and set it to be <T>.
 		//
-		int e = DdsAddVariableA(p, &pv, NAME(v_divided),USER_FLAG(v_divided),VALUE(v_divided),FUNCTION(v_divided),RHSV_COUNT(v_divided), (DDS_VARIABLE**)RHSVs(v_divided));
+		int e = DdsAddVariableA(p, &pv, NAME(v_divided), USER_FLAG(v_divided), VALUE(v_divided), FUNCTION(v_divided), RHSV_COUNT(v_divided), (DDS_VARIABLE**)RHSVs(v_divided));
 		if (e != 0) THROW(e, "Can not divide a variable (or create a new variable) in DdsDivideLoop()");
-		SET_SFLAG_ON(pv, SYS_FLAG(v_divided)|DDS_FLAG_TARGETED);
-		SET_SFLAG_OFF(pv, DDS_SFLAG_FREE);
+		SET_SFLAG_ON(pv       , SYS_FLAG(v_divided) | DDS_FLAG_TARGETED | DDS_SFLAG_DIVIDED | DDS_SFLAG_CHECKED);
+		SET_SFLAG_ON(v_divided,                       DDS_SFLAG_FREE    | DDS_SFLAG_DIVIDED | DDS_SFLAG_CHECKED);
 		int l = strlen(NAME(pv));
+		RHSV(v_divided, 0) = pv;   // This must be restored on Re-GRAPH
 		((char*)NAME(pv))[l] = '+'; // sign of divided and added variable.
 	};
 

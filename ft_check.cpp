@@ -33,7 +33,7 @@ EXPORT(int) DdsCheckRouteFT(DDS_PROCESSOR ph)
 {
 	ENTER(ph);
 	int cv = VARIABLE_COUNT();
-	STACK(cv + 1);
+	STACK(cv/2);
 
 	// count <T>s
 	T_COUNT() = 0;
@@ -57,6 +57,7 @@ EXPORT(int) DdsCheckRouteFT(DDS_PROCESSOR ph)
 	for (int i = 0; i < cv; ++i) {
 		DdsVariable* pv = VARIABLE(i);
 		SCORE(pv) = -1;
+		CLEAR_PROC_FLAG(pv);
 		NEXT(pv) = nullptr;
 		if (IS_ALIVE(pv) && IS_TARGETED(pv)) {
 			SCORE(pv) = ix; // Route ID!
@@ -110,7 +111,6 @@ EXPORT(int) DdsCheckRouteFT(DDS_PROCESSOR ph)
 		}
 		return ix; // route ID.
 	};
-
 
 	auto REACHED_F = [&](DdsVariable *pf) {
 		TRACE(("Reached to %s <F>.\n", NAME(pf)));

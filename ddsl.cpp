@@ -10,8 +10,9 @@
   Masao Iri, Junkichi Tsunekawa, Keiji Yajima:The Graphical Techniques Used for a Chemical Process Simulator "JUSE GIFS". IFIP Congress
   Dr. Kazuo Murota (auth.):Systems Analysis by Graphs and Matroids: Structural Solvability and Controllability
 (https://jp1lib.org/book/2264352/362f6b?id=2264352&secret=362f6b)
- K.Yajima, J.Tsunekawaand S.Kobayashi(1981) : On equation - based dynamic simulation.Proc. 2nd World Congr.Chemical ~, Montreal, y.
- K.Yajima, J.Tsunekawa, H.Shono, S.Kobayashi and D.J.Sebastian (1982) : On graph - theoretic techniques for large - scale process systems.Int.Symp.Process Syst.Engin., Kyoto, August 1982.
+ K.Yajima, J.Tsunekawa and S.Kobayashi(1981) : On equation - based dynamic simulation.Proc. Proceedings. 2nd World Congress of Chemical Engineering, 1981 Montreal, 1981
+ K.Yajima, J.Tsunekawa, H.Shono, S.Kobayashi and D.J.Sebastian (1982) : On graph - theoretic techniques for large - scale process systems.
+ The International symposium on process systems engineering,Kyoto International Conference Hall, Kyoto Japan, August 23-27, 1982
 */
 
 #include <stdio.h>
@@ -77,7 +78,8 @@ EXPORT(void) DdsDeleteProcessor(DDS_PROCESSOR* ph)
 	MemFree((void**)&(VARIABLEs()));
 	
 	// free memories allocated at  DdsCheckRouteFT()
-	if (TVs() != nullptr)          MemFree((void**)&(TVs()));
+	if (TVs()  != nullptr)         MemFree((void**)&(TVs()));
+
 	if (F_COUNTs() != nullptr)     MemFree((void**)&(F_COUNTs()));
 	if (F_MAX_COUNTs() != nullptr) MemFree((void**)&(F_MAX_COUNTs()));
 	for (int i = 0; i < T_COUNT(); ++i) {
@@ -87,6 +89,16 @@ EXPORT(void) DdsDeleteProcessor(DDS_PROCESSOR* ph)
 
 	// DdsBuildSequence()
 	if (IVs() != nullptr)          MemFree((void**)&(IVs()));
+
+	// DdsComputeStatic()
+	if(JACOBIAN_MATRIX()!= nullptr)   MemFree((void**)&(JACOBIAN_MATRIX()));
+	if (DELTAs()        != nullptr)   MemFree((void**)&(DELTAs()));
+	if (Xs()            != nullptr)   MemFree((void**)&(Xs()));
+	if (DXs()           != nullptr)   MemFree((void**)&(DXs()));
+	if (Ys()            != nullptr)   MemFree((void**)&(Ys()));
+	if (Y_NEXTs()       != nullptr)   MemFree((void**)&(Y_NEXTs()));
+	if (SCALE()         != nullptr)   MemFree((void**)&(SCALE())); 
+	if (PIVOT()         != nullptr)   MemFree((void**)&(PIVOT()));
 
 	// Finally delete processor!
 	MemFree((void**)&(p));
