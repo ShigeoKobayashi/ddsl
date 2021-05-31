@@ -15,6 +15,9 @@
 #include "utils.h"
 #include "debug.h"
 
+// in ddsl.cpp
+EXPORT(void)          DdsFreeWorkMemory(DDS_PROCESSOR ph);
+
 //
 // Select <AL>ive variables that have contribution to compute any <R>,and define connected components.
 // Also checks number of <F>s==<T>s.
@@ -32,13 +35,28 @@ EXPORT(int) DdsSieveVariable(DDS_PROCESSOR ph)
 	bool retry = false;
 	STACK(cv/2);
 
-	// To-do:
-	//   Do not forget the case DdsSieveVariable(ph) called again.
+	// To-do: In case DdsSieveVariable(ph) is called more than once without deleting the processor ph.
 	//     1) restore <DD> variables.
 	//         <DD> has been flagged <F> and RHSV(<F>,0) is newly created <T>,
 	//         so restore RHSV(<F>,0) from RHSV(new <T>,0) and remove newly created <T>.
 	//     2) free arrays (working memories) allocated before.
-	//       ............................................
+	for (int i = cv-1; i >0; --i) {
+		DdsVariable* pv = VARIABLE(i);
+		if (!IS_SFLAG_AND(pv,DDS_FLAG_TARGETED|DDS_SFLAG_DIVIDED)) break;
+		DdsVariable* v_restore = RHSV(pv, 0);
+		for (int j = 0; j < i; ++j) {
+			DdsVariable* pd = VARIABLE(j);
+			if (!IS_SFLAG_AND(pd, DDS_SFLAG_FREE | DDS_SFLAG_DIVIDED)) continue;
+			if (RHSV(pd, 0) == pv) {
+				RHSV(pd, 0) = v_restore;
+				cv--;
+				VARIABLE_COUNT()--;
+				MemFree((void**)&(pv));
+				break;
+			}
+		}
+	}
+	DdsFreeWorkMemory(ph);
 
 	// check user flag and copy it to system flag.
 	{

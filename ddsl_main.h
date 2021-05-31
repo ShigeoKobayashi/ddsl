@@ -18,21 +18,20 @@
 #define VARIABLE(i)         (VARIABLEs()[i])  // i-th variable registered.
 #define STATUS()            ((p)->status)     // final status of eache function call.
 #define JACOBIAN_MATRIX()   ((p)->jacobian)   // Jacobian matrix for solving system of non-linear equations.
+#define SCALE()             ((p)->scale)     // an array for scaling value used in LU decomposition
+#define PIVOT()             ((p)->pivot)     // for pivoting 
 #define T_VALUEs()          ((p)->t_computed)
 #define T_VALUE(i)          ((T_VALUEs())[i])
 #define DELTAs()            ((p)->delta)
 #define DELTA(i)            ((DELTAs())[i])  // next increment each Newton step (block base).
 #define Ys()                ((p)->y_cur)     // current value of <T>-value - value computed. (block base) 
 #define Y_NEXTs()           ((p)->y_next)    // next value of <T>-value - value computed. (block base)
-#define Y(i)                ((Ys())[i]) 
-#define Y_NEXT(i)           ((Y_NEXTs())[i])
-#define SCALE()             ((p)->scale)     // an array for scaling value used in LU decomposition
-#define PIVOT()             ((p)->pivot)     // for pivoting 
-
+#define Y(i)                ((Ys())[i])      // Lhsv of y = f(x) ==> 0
+#define Y_NEXT(i)           ((Y_NEXTs())[i]) // next estimation of y.
 #define Xs()                ((p)->x)
-#define X(i)                ((Xs())[i])
+#define X(i)                ((Xs())[i])        // y=f(x) ==> 0
 #define DXs()               ((p)->dx)
-#define DX(i)               ((DXs())[ix_top+i]) // total base dx
+#define DX(i)               ((DXs())[ix_top+i]) // total base dx (dx of dy/dx)
 #define EPS()               ((p)->eps)
 
 #define T_COUNT()           ((p)->t_count)    // Total number of <T>s registered.
@@ -43,6 +42,8 @@
 #define I_COUNT()           ((p)->i_count)    // <I> count
 #define IVs()               ((p)->Is)         // Array for all <I>s
 #define IV(i)               (IVs()[i])        // i-th <I> variable.
+#define VtoDRs()            ((p)->I_toDR) 
+#define VtoDR(i)            (VtoDRs()[i])
 
 #define F_COUNTs()          ((p)->f_count)
 #define F_COUNT(i)          (F_COUNTs()[i])   // number of <F>s connected to <T>[i]

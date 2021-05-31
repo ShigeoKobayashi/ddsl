@@ -70,6 +70,42 @@ EXPORT(int)  DdsCreateProcessor(DDS_PROCESSOR* p, int nv)
 	return 0;
 }
 
+EXPORT(void) DdsFreeWorkMemory(DDS_PROCESSOR ph)
+{
+	if (ph == nullptr) return;
+	DdsProcessor* p = (DdsProcessor*)(ph);
+	// free memories allocated at  DdsCheckRouteFT()
+	if (TVs() != nullptr)          MemFree((void**)&(TVs()));
+	if (F_COUNTs() != nullptr)     MemFree((void**)&(F_COUNTs()));
+	if (F_MAX_COUNTs() != nullptr) MemFree((void**)&(F_MAX_COUNTs()));
+	for (int i = 0; i < T_COUNT(); ++i) {
+		MemFree((void**)&(Fs_CONNECTED(i)));
+	}
+	if (FT_MATRIX() != nullptr)    MemFree((void**)&(FT_MATRIX()));
+	// DdsBuildSequence()
+	if (IVs() != nullptr)          MemFree((void**)&(IVs()));
+	// DdsComputeStatic()
+	if (JACOBIAN_MATRIX() != nullptr)   MemFree((void**)&(JACOBIAN_MATRIX()));
+	if (DELTAs() != nullptr)       MemFree((void**)&(DELTAs()));
+	if (Xs() != nullptr)           MemFree((void**)&(Xs()));
+	if (DXs() != nullptr)          MemFree((void**)&(DXs()));
+	if (Ys() != nullptr)           MemFree((void**)&(Ys()));
+	if (Y_NEXTs() != nullptr)      MemFree((void**)&(Y_NEXTs()));
+	if (SCALE() != nullptr)        MemFree((void**)&(SCALE()));
+	if (PIVOT() != nullptr)        MemFree((void**)&(PIVOT()));
+
+	if (VtoDRs() != nullptr) {
+		for (int i = 0; i < I_COUNT(); ++i) {
+			if(VtoDR(i)!=nullptr) MemFree((void**)&(VtoDR(i)));
+		}
+		MemFree((void**)&(VtoDRs()));
+	}
+
+	T_COUNT() = 0;
+	B_COUNT() = 0;
+	I_COUNT() = 0;
+}
+
 EXPORT(void) DdsDeleteProcessor(DDS_PROCESSOR* ph)
 {
 	if (ph == nullptr) return;
@@ -77,28 +113,7 @@ EXPORT(void) DdsDeleteProcessor(DDS_PROCESSOR* ph)
 	for(int i=0;i<VARIABLE_COUNT();++i) MemFree((void**)&(VARIABLE(i)));
 	MemFree((void**)&(VARIABLEs()));
 	
-	// free memories allocated at  DdsCheckRouteFT()
-	if (TVs()  != nullptr)         MemFree((void**)&(TVs()));
-
-	if (F_COUNTs() != nullptr)     MemFree((void**)&(F_COUNTs()));
-	if (F_MAX_COUNTs() != nullptr) MemFree((void**)&(F_MAX_COUNTs()));
-	for (int i = 0; i < T_COUNT(); ++i) {
-		MemFree((void**)&(Fs_CONNECTED(i)));
-	}
-	if (FT_MATRIX() != nullptr)    MemFree((void**)&(FT_MATRIX()));
-
-	// DdsBuildSequence()
-	if (IVs() != nullptr)          MemFree((void**)&(IVs()));
-
-	// DdsComputeStatic()
-	if(JACOBIAN_MATRIX()!= nullptr)   MemFree((void**)&(JACOBIAN_MATRIX()));
-	if (DELTAs()        != nullptr)   MemFree((void**)&(DELTAs()));
-	if (Xs()            != nullptr)   MemFree((void**)&(Xs()));
-	if (DXs()           != nullptr)   MemFree((void**)&(DXs()));
-	if (Ys()            != nullptr)   MemFree((void**)&(Ys()));
-	if (Y_NEXTs()       != nullptr)   MemFree((void**)&(Y_NEXTs()));
-	if (SCALE()         != nullptr)   MemFree((void**)&(SCALE())); 
-	if (PIVOT()         != nullptr)   MemFree((void**)&(PIVOT()));
+	DdsFreeWorkMemory(*ph);
 
 	// Finally delete processor!
 	MemFree((void**)&(p));
@@ -259,7 +274,7 @@ EXPORT(void) DdsDbgPrintF(FILE* f, const char* title, DDS_PROCESSOR p)
 		}
 		fprintf(f,")");
 		if (pv->next != nullptr) fprintf(f, "->%s", (pv->next)->Name);
-		fprintf(f,"=%E", pv->Value);
+		fprintf(f,"=%lE", pv->Value);
 		fprintf(f, "\n");
 	}
 }

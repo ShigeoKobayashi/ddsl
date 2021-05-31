@@ -1,5 +1,6 @@
 ﻿#include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include "ddsl.h"
 
 double CompVal(DDS_PROCESSOR p, DDS_VARIABLE v)
@@ -362,7 +363,7 @@ double ans[] = { -1.0, 2.0, 3.0 };
 double CompVal1(DDS_PROCESSOR p, DDS_VARIABLE v)
 {
 	DdsVariable* pv = (DdsVariable*)v;
-	return 2.0 * (((DdsVariable*)(pv->Rhsvs)[0])->Value) - 1.0;
+	return exp(((DdsVariable*)(pv->Rhsvs)[0])->Value) - 2.0;
 }
 
 void Test()
@@ -387,6 +388,9 @@ void Test()
 	DdsCompileGraph(p);
 	DdsComputeStatic(p);
 	DdsDbgPrintF(stdout, "After DdsComputeStatic(p)", p);
+	
+	DdsCompileGraph(p);
+
 
 	DdsDeleteProcessor(&p);
 	getchar();

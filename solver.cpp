@@ -20,12 +20,9 @@
 #define MOVE_F(i,v) {DdsVariable* pf = F_PAIRED(ix_top+i);VALUE(pf)=v;if(IS_DIVIDED(pf)) VALUE(RHSV(pf, 0))=VALUE(pf);}
 #define MOVE_I(i)   {X(i)=VALUE(F_PAIRED(ix_top + i));Y(i) = Y_NEXT(i);}
 #define MOVE()      {for (int i = 0; i < n; ++i) { X(i)=VALUE(F_PAIRED(ix_top+i));Y(i) = Y_NEXT(i);} }
-
-auto EQUAL = [](double a, double b) {
-    if (a == b) return true;
-    if (fabs(a - b) / (fabs(a) + fabs(b)) < 1.0e-6) return true;
-    return false;
-};
+#define EQUAL(a,b)  (((a == b)||(fabs(a-b)/(fabs(a)+fabs(b)))<1.0e-6)?true:false)
+#define CONVERGED()     (norm <= EPS())
+#define NOT_CONVERGED() (norm >  EPS())
 
 static int  LuDecomp(double* A, double* scales, int* index, int n);
 static void LuSolve(double* x, double* LU, double* b, int* index, int n);
@@ -109,31 +106,36 @@ DdsVariable* Newton(DdsProcessor* p, DdsVariable* vf)
 
     for (int i = 0; i < n; ++i) X(i) = VALUE(F_PAIRED(ix_top + i));
     norm = ComputeBlock(p, pv,Ys());
-    while(norm > EPS()) {
+    while(NOT_CONVERGED()) {
         // Not yet converged. => Compute Jacobian matrix
         ComputeJacobian(p,pv,n,ix_top);
         SolveJacobian(p,n);
         // Next estimation
         double fact = 1.0;
         bool ok = false;
+        double dx = 0;
         do {
-            for (int i = 0; i < n; ++i) MOVE_F(i,X(i) + DELTA(i) * fact);
+            dx = 0.0;
+            for (int i = 0; i < n; ++i) {
+                double d = DELTA(i) * fact;
+                MOVE_F(i, X(i) + d);
+                dx += fabs(d);
+            }
             double t_norm = ComputeBlock(p, pv,Y_NEXTs());
             if (t_norm < norm) {
                 norm = t_norm;
-                MOVE();
-                ok = true;
-                if (norm <= EPS()) break;
+                MOVE(); ok = true;
+                if (CONVERGED()) break;
             } else {
                 if (ok) break;
-                fact *= 0.5;
+                fact *= 0.1;
             }
-        } while (fact > 0.01);
+        } while ( dx/norm > EPS() );
         if(!ok) {
             // Unable to decrease by Newton -> direct search
             for (int i = 0; i < n; ++i) MOVE_F(i, X(i));
             for (int i = 0; i < n; ++i) {
-                double t_fact = 1.0;
+                double t_fact = fact*10.0;
                 do {
                     MOVE_F(i, X(i) + DELTA(i) * t_fact);
                     double t_norm = ComputeBlock(p, pv,Y_NEXTs());
@@ -141,7 +143,7 @@ DdsVariable* Newton(DdsProcessor* p, DdsVariable* vf)
                         norm = t_norm; ok = true; MOVE_I(i);
                         break;
                     } else {
-                        t_fact *= 0.5;
+                        t_fact *= 0.1;
                         MOVE_F(i, X(i) - DELTA(i) * t_fact);
                         t_norm = ComputeBlock(p, pv,Y_NEXTs());
                         if (t_norm < norm) {
@@ -151,7 +153,7 @@ DdsVariable* Newton(DdsProcessor* p, DdsVariable* vf)
                             MOVE_F(i,X(i));
                         }
                     }
-                } while (t_fact > 0.01);
+                } while (t_fact > EPS());
             }
         }
         if (!ok || ++ni > max_iter) THROW(DDS_ERROR_CONVERGENCE, DDS_MSG_CONVERGENCE);

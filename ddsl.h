@@ -96,6 +96,7 @@ typedef struct {
 		int            b_count; /* total number of blocks. */
 		DdsVariable**  Is;      /* <I>s */
 		int            i_count; /* the size of Is[] */
+		DdsVariable*** I_toDR;  /* route variables from Is[i] to <DR>s (used in Runge-Kutta method) */
 
 		/* changed by DdsBuildSequence(): Sequence list */
 		DdsVariable*  VTopOnceT;
