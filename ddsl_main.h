@@ -13,13 +13,18 @@
 #include "debug.h"
 
  // For DdsProcessor
+#define TIME()              ((p)->Time)       // Time
+#define STEP()              ((p)->Step)       // Step
+#define RHSV_EX()           ((p)->rhsv_extra) // extra elements of RHSVs of eac variable(normally zero).
+#define METHOD()            ((p)->method)     // Integration method or steady-state.
+#define I_BACKTRACK()       ((p)->i_backtrack) // 0 for BW=EULER method,DDS_FLAG_INTEGRATION for other methods.
 #define VARIABLE_COUNT()    ((p)->v_count)    // number of the total variables registered.
 #define VARIABLEs()         ((p)->Vars)       // array of the registered variables registered.
 #define VARIABLE(i)         (VARIABLEs()[i])  // i-th variable registered.
 #define STATUS()            ((p)->status)     // final status of eache function call.
 #define JACOBIAN_MATRIX()   ((p)->jacobian)   // Jacobian matrix for solving system of non-linear equations.
-#define SCALE()             ((p)->scale)     // an array for scaling value used in LU decomposition
-#define PIVOT()             ((p)->pivot)     // for pivoting 
+#define SCALE()             ((p)->scale)      // an array for scaling value used in LU decomposition
+#define PIVOT()             ((p)->pivot)      // for pivoting 
 #define T_VALUEs()          ((p)->t_computed)
 #define T_VALUE(i)          ((T_VALUEs())[i])
 #define DELTAs()            ((p)->delta)
@@ -42,6 +47,8 @@
 #define I_COUNT()           ((p)->i_count)    // <I> count
 #define IVs()               ((p)->Is)         // Array for all <I>s
 #define IV(i)               (IVs()[i])        // i-th <I> variable.
+#define ISs                 ((p)->R_IVS)      // Value of <I>s before integration.
+#define IS(i)               (ISs[i])
 #define VtoDRs()            ((p)->I_toDR) 
 #define VtoDR(i)            (VtoDRs()[i])
 

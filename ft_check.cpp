@@ -154,7 +154,7 @@ EXPORT(int) DdsCheckRouteFT(DDS_PROCESSOR ph)
 
 	//
 	// Confirm/make 1 to 1 correspondence.
-	ENABLE_BACKTRACK( DDS_FLAG_SET | DDS_SFLAG_FREE | DDS_FLAG_INTEGRATED );
+	ENABLE_BACKTRACK( DDS_FLAG_SET | DDS_SFLAG_FREE | I_BACKTRACK());
 	for (int i = 0; i < T_COUNT(); ++i) {
 		DdsVariable* pv = TV(i);
 
@@ -165,7 +165,7 @@ EXPORT(int) DdsCheckRouteFT(DDS_PROCESSOR ph)
 		PUSH_F(pv);
 		bool ok = false;
 		while ((pv = PEEK()) != nullptr) {
-			MOVE_BACK(pv, DDS_FLAG_SET | DDS_FLAG_INTEGRATED | DDS_SFLAG_STACKED);
+			MOVE_BACK(pv, DDS_FLAG_SET | I_BACKTRACK() | DDS_SFLAG_STACKED);
 			if(INDEX(pv) < 0) { POP_F(); continue; }
 			DdsVariable *rv = RHSV(pv, INDEX(pv));
 			TRACE(("%s ", NAME(rv)));
@@ -193,13 +193,13 @@ EXPORT(int) DdsCheckRouteFT(DDS_PROCESSOR ph)
 		for (int j = 0; j < T_COUNT(); ++j) {
 			SET_SFLAG_OFF(F_CONNECTED(j, 0), DDS_SFLAG_CHECKED);
 		}
-		ENABLE_BACKTRACK(DDS_FLAG_SET | DDS_SFLAG_FREE | DDS_FLAG_INTEGRATED);
+		ENABLE_BACKTRACK(DDS_FLAG_SET | DDS_SFLAG_FREE | I_BACKTRACK());
 		STACK_CLEAR();
 		PUSH(nullptr);
 		PUSH(pv);
 		SET_SFLAG_ON(F_CONNECTED(i, 0), DDS_SFLAG_CHECKED);
 		while ((pv = PEEK()) != nullptr) {
-			MOVE_BACK(pv, DDS_FLAG_SET | DDS_FLAG_INTEGRATED | DDS_FLAG_TARGETED);
+			MOVE_BACK(pv, DDS_FLAG_SET | I_BACKTRACK() | DDS_FLAG_TARGETED);
 			if (INDEX(pv) < 0) { POP_F(); continue; }
 			DdsVariable* rv = RHSV(pv, INDEX(pv));
 			if (IS_FREE(rv) && !IS_CHECKED(rv)) {
@@ -343,14 +343,14 @@ EXPORT(int) DdsCheckRouteFT(DDS_PROCESSOR ph)
 	}
 	for (int i = 0; i < T_COUNT(); ++i) {
 		DdsVariable* pv = TV(i);
-		ENABLE_BACKTRACK(DDS_FLAG_SET | DDS_SFLAG_FREE | DDS_FLAG_INTEGRATED);
+		ENABLE_BACKTRACK(DDS_FLAG_SET | DDS_SFLAG_FREE | I_BACKTRACK());
 		STACK_CLEAR();
 		PUSH(nullptr);
 		PUSH(pv);
 		int label = SCORE(pv);
 		SET_SFLAG_ON(F_CONNECTED(i, 0), DDS_SFLAG_CHECKED);
 		while ((pv = PEEK()) != nullptr) {
-			MOVE_BACK(pv, DDS_FLAG_SET | DDS_FLAG_INTEGRATED | DDS_FLAG_TARGETED);
+			MOVE_BACK(pv, DDS_FLAG_SET | I_BACKTRACK() | DDS_FLAG_TARGETED);
 			if (INDEX(pv) < 0) { POP_F(); continue; }
 			DdsVariable* rv = RHSV(pv, INDEX(pv));
 			if (IS_FREE(rv) && label == SCORE(rv)) {

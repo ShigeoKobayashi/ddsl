@@ -79,11 +79,16 @@ typedef struct PROCESSOR {
 typedef struct {
 #endif
 		void*         UserPTR; /* just for user(DDSL never touch) */
+		int           method;  /* Integration method or steady-state specification */
+		unsigned int  i_backtrack; /* DDS_FLAG_INTEGRATED if 'NOT' backtrack through <I>,0 enable to backtrach through <I>,for BW=EULER method.*/
 		int           status;  /* status of function call */
 		/* changed at DdsAddVariableV/A() stage */
 		DdsVariable** Vars;    /* Variables registered  */
 		int           v_count; /* Total number of variables registered to Vars[] */
 		int           v_max;   /* Size of the Vars[] */
+		int           rhsv_extra; /* extra space for each variable. */
+		DdsVariable*  Time;  /* Time */
+		DdsVariable*  Step;  /* Step */
 
 		/* Arrays dynamically allocated during the processing. */
 		/* Allocated and changed by DdsCheckRouteFT() */
@@ -96,9 +101,14 @@ typedef struct {
 		int            b_count; /* total number of blocks. */
 		DdsVariable**  Is;      /* <I>s */
 		int            i_count; /* the size of Is[] */
-		DdsVariable*** I_toDR;  /* route variables from Is[i] to <DR>s (used in Runge-Kutta method) */
+		/* work array used by runge-kutta method */
+		double*        R_K1;
+		double*        R_K2;
+		double*        R_K3;
+		double*        R_K4;
+		double*        R_IVS;
 
-		/* changed by DdsBuildSequence(): Sequence list */
+		/* setup by DdsBuildSequence(): Sequence list */
 		DdsVariable*  VTopOnceT;
 		DdsVariable*  VEndOnceT;
 		DdsVariable*  VTopAnyT;
@@ -117,6 +127,7 @@ typedef struct {
 		double*       scale;      /* scaling (used by LuDecomposition solving Jacobian) */
 		int*          pivot;      /* pivot index  (used by LuDecomposition solving Jacobian) */
 		double        eps;        /* convergence criteria */
+		int           max_iter;   /* maximum iteration count in Newton method */
 } DdsProcessor;
 
 /*
@@ -132,11 +143,16 @@ typedef DdsVariable*  DDS_VARIABLE;   /* Variable handle  */
 #define DDS_FLAG_REQUIRED       0x00000001  /* <R> */
 #define DDS_FLAG_SET            0x00000002  /* <S> */
 #define DDS_FLAG_TARGETED       0x00000004  /* <T> */
-#define DDS_FLAG_INTEGRATED     0x00000008  /* <I> */
+#define DDS_FLAG_INTEGRATED     0x00000008  /* <I>: RHSVs must be (<DR>,Time,Step)  */
 #define DDS_FLAG_VOLATILE       0x00000010  /* <V> */
 #define DDS_FLAG_DIVISIBLE      0x00000020  /* <D> */
 #define DDS_FLAG_NON_DIVISIBLE  0x00000040  /* <N> */
 #define DDS_FLAG_MASK           0x00000FFF  /* Mask */
+
+#define DDS_I_EULER            1 /* Integration by Euler method */
+#define DDS_I_BW_EULER         2 /* Integration by Backward-Euler method */
+#define DDS_I_RUNGE_KUTTA      3 /* Integration by Runge-Kutta method */
+#define DDS_STEADY_STATE       4 /* Compute steady state */
 
 /*   System flags   */
 #define DDS_SFLAG_ALIVE         0x00001000  /* <AL> */
@@ -192,6 +208,9 @@ typedef DdsVariable*  DDS_VARIABLE;   /* Variable handle  */
 #define DDS_ERROR_JACOBIAN      -10 /* Singular Jacobian matrix. */
 #define DDS_MSG_JACOBIAN        "Singular Jacobian matrix."
 
+#define DDS_ERROR_ARGUMENT      -11 /* Invalid argument specified */
+#define DDS_MSG_ARGUMENT        "Invalid argument specified."
+
 #define DDS_ERROR_SYSTEM        -999 /* Undefined c/c++ level error. */
 #define DDS_MSG_SYSTEM          "Undefined c/c++ level error."
 
@@ -199,10 +218,31 @@ EXPORT(int)           DdsCreateProcessor(DDS_PROCESSOR* p, int nv);
 EXPORT(void)          DdsDeleteProcessor(DDS_PROCESSOR* p);
 EXPORT(int)           DdsAddVariableV(DDS_PROCESSOR p,DDS_VARIABLE *pv,const char *name,unsigned int f,double val, ComputeVal func,int nr,...);
 EXPORT(int)           DdsAddVariableA(DDS_PROCESSOR p, DDS_VARIABLE* pv, const char* name, unsigned int f, double val, ComputeVal func, int nr, DDS_VARIABLE** rhsvs);
-EXPORT(int)           DdsCompileGraph(DDS_PROCESSOR p);
-EXPORT(int)           DdsCheckVariable(DDS_VARIABLE hv);
+EXPORT(int)           DdsCompileGraph(DDS_PROCESSOR p,int method);
+EXPORT(int)           DdsComputeStatic(DDS_PROCESSOR ph);
+EXPORT(int)           DdsComputeDynamic(DDS_PROCESSOR ph,int method);
+EXPORT(DDS_VARIABLE)  DdsTime(DDS_PROCESSOR ph);
+EXPORT(DDS_VARIABLE)  DdsStep(DDS_PROCESSOR ph);
+EXPORT(double)        DdsGetEPS(DDS_PROCESSOR ph);
+EXPORT(double)        DdsSetEPS(DDS_PROCESSOR ph, double eps);
+EXPORT(int)           DdsGetMaxIterations(DDS_PROCESSOR ph);
+EXPORT(int)           DdsSetMaxIterations(DDS_PROCESSOR ph, int max);
+EXPORT(void*)         DdsGetUserPTR(void* pv);
+EXPORT(void*)         DdsSetUserPTR(void* pv,void* val);
+
+
+EXPORT(DDS_VARIABLE*) DdsVariables(int* nv, DDS_PROCESSOR p);
+
+EXPORT(double)        DdsGetValue(DDS_VARIABLE v);
+EXPORT(double)        DdsSetValue(DDS_VARIABLE v,double val);
+EXPORT(DDS_VARIABLE*) DdsRhsvs(int* nr, DDS_VARIABLE v);
 EXPORT(int)           DdsSetRHSV(DDS_VARIABLE hv, int i, DDS_VARIABLE rv);
-EXPORT(DDS_VARIABLE)  DdsGetRHSV(DDS_VARIABLE hv, int i, DDS_VARIABLE rv);
+EXPORT(DDS_VARIABLE)  DdsGetRHSV(DDS_VARIABLE hv, int i);
+EXPORT(int)           DdsCheckVariable(DDS_PROCESSOR ph, DDS_VARIABLE hv);
+EXPORT(DDS_VARIABLE)  DdsGetVariableNext(DDS_VARIABLE hv);
+EXPORT(int)           DdsGetVariableIndex(DDS_VARIABLE hv);
+EXPORT(int)           DdsGetVariableScore(DDS_VARIABLE hv);
+
 
 EXPORT(unsigned int)  DdsUserFlagOn(DDS_VARIABLE hv, unsigned int f);
 EXPORT(unsigned int)  DdsUserFlagOff(DDS_VARIABLE hv, unsigned int f);
@@ -215,10 +255,6 @@ EXPORT(int)           DdsDivideLoop(DDS_PROCESSOR ph);
 EXPORT(int)           DdsCheckRouteFT(DDS_PROCESSOR ph);
 EXPORT(int)           DdsBuildSequence(DDS_PROCESSOR ph);
 
-EXPORT(int)           DdsComputeStatic(DDS_PROCESSOR ph);
-
-EXPORT(DDS_VARIABLE*) DdsVariables(int* nv, DDS_PROCESSOR p);
-EXPORT(DDS_VARIABLE*) DdsRhsvs(int* nr, DDS_VARIABLE v);
 
 
 #if defined(__cplusplus)

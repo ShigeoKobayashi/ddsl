@@ -37,24 +37,13 @@ EXPORT(int) DdsSieveVariable(DDS_PROCESSOR ph)
 
 	// To-do: In case DdsSieveVariable(ph) is called more than once without deleting the processor ph.
 	//     1) restore <DD> variables.
-	//         <DD> has been flagged <F> and RHSV(<F>,0) is newly created <T>,
-	//         so restore RHSV(<F>,0) from RHSV(new <T>,0) and remove newly created <T>.
+	//         Remove newly created <T>.
 	//     2) free arrays (working memories) allocated before.
 	for (int i = cv-1; i >0; --i) {
 		DdsVariable* pv = VARIABLE(i);
 		if (!IS_SFLAG_AND(pv,DDS_FLAG_TARGETED|DDS_SFLAG_DIVIDED)) break;
-		DdsVariable* v_restore = RHSV(pv, 0);
-		for (int j = 0; j < i; ++j) {
-			DdsVariable* pd = VARIABLE(j);
-			if (!IS_SFLAG_AND(pd, DDS_SFLAG_FREE | DDS_SFLAG_DIVIDED)) continue;
-			if (RHSV(pd, 0) == pv) {
-				RHSV(pd, 0) = v_restore;
-				cv--;
-				VARIABLE_COUNT()--;
-				MemFree((void**)&(pv));
-				break;
-			}
-		}
+		VARIABLE_COUNT()--;
+		MemFree((void**)&(pv));
 	}
 	DdsFreeWorkMemory(ph);
 
@@ -64,7 +53,7 @@ EXPORT(int) DdsSieveVariable(DDS_PROCESSOR ph)
 		int ce = 0;
 		for (int i = 0; i < cv; ++i) {
 			SYS_FLAG(VARIABLE(i)) = USER_FLAG(VARIABLE(i)) & DDS_FLAG_MASK;
-			if(DdsCheckVariable(VARIABLE(i))) ++ce;
+			if(DdsCheckVariable(ph,VARIABLE(i))) ++ce;
 		}
 		if (ce > 0) THROW(DDS_ERROR_FLAG, DDS_MSG_FLAG);
 	}
@@ -120,14 +109,14 @@ EXPORT(int) DdsSieveVariable(DDS_PROCESSOR ph)
 		for (int i = 0; i < cv; ++i) {
 			DdsVariable* pv = VARIABLE(i);
 			if (!IS_TARGETED(pv)) continue;
-			ENABLE_BACKTRACK(DDS_FLAG_SET | DDS_SFLAG_FREE | DDS_FLAG_INTEGRATED);
+			ENABLE_BACKTRACK(DDS_FLAG_SET | DDS_SFLAG_FREE | I_BACKTRACK());
 			STACK_CLEAR();
 			PUSH(nullptr);
 			PUSH(pv);
 			while ((pv = PEEK()) != nullptr) {
 				if (!IS_FREE(pv)) {
 					// go-back further. but not go-back over <T>.
-					MOVE_BACK(pv, DDS_FLAG_SET | DDS_FLAG_TARGETED | DDS_FLAG_INTEGRATED);
+					MOVE_BACK(pv, DDS_FLAG_SET | DDS_FLAG_TARGETED | I_BACKTRACK());
 					if (INDEX(pv)>=0) PUSH(RHSV(pv,INDEX(pv)));
 					else              POP();
 				} else {
@@ -229,7 +218,7 @@ EXPORT(int) DdsSieveVariable(DDS_PROCESSOR ph)
 	for (int i = 0; i < cv; ++i) {
 		DdsVariable* pv = VARIABLE(i);
 		if (!IS_ALIVE(pv)) continue;
-		int nr = BACKWAY_COUNT(pv, DDS_FLAG_SET | DDS_SFLAG_FREE | DDS_FLAG_INTEGRATED); // Not back-track(MERGE) over <I>
+		int nr = BACKWAY_COUNT(pv, DDS_FLAG_SET | DDS_SFLAG_FREE | I_BACKTRACK()); // Not back-track(MERGE) over <I>
 		for(int j=0;j<nr;++j) {
 			DdsVariable* rVar = RHSV(pv,j);
 			ASSERT(IS_ALIVE(rVar));

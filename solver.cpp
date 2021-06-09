@@ -15,12 +15,12 @@
 #include "utils.h"
 #include "debug.h"
 
-#define _IX2(i,j)   ((i)*(n)+j)
-#define J(i,j)      JACOBIAN_MATRIX()[_IX2(i,j)]
-#define MOVE_F(i,v) {DdsVariable* pf = F_PAIRED(ix_top+i);VALUE(pf)=v;if(IS_DIVIDED(pf)) VALUE(RHSV(pf, 0))=VALUE(pf);}
-#define MOVE_I(i)   {X(i)=VALUE(F_PAIRED(ix_top + i));Y(i) = Y_NEXT(i);}
-#define MOVE()      {for (int i = 0; i < n; ++i) { X(i)=VALUE(F_PAIRED(ix_top+i));Y(i) = Y_NEXT(i);} }
-#define EQUAL(a,b)  (((a == b)||(fabs(a-b)/(fabs(a)+fabs(b)))<1.0e-6)?true:false)
+#define _IX2(i,j)       ((i)*(n)+j)
+#define J(i,j)          JACOBIAN_MATRIX()[_IX2(i,j)]
+#define UPDATE_F(i,v)   {VALUE(F_PAIRED(ix_top+i)) = v;}
+#define UPDATE_XY_I(i)  {X(i)=VALUE(F_PAIRED(ix_top + i));Y(i) = Y_NEXT(i);}
+#define UPDATE_XY()     {for (int i = 0; i < n; ++i) { UPDATE_XY_I(i);} }
+#define EQUAL(a,b)      (((a == b)||(fabs(a-b)/(fabs(a)+fabs(b)))<1.0e-6)?true:false)
 #define CONVERGED()     (norm <= EPS())
 #define NOT_CONVERGED() (norm >  EPS())
 
@@ -34,6 +34,11 @@ static void         ComputeJacobian(DdsProcessor *p,DdsVariable *pv,int n,int ix
 static void         SolveJacobian(DdsProcessor* p, int n);
 static void         Derivate(DdsProcessor* p, DdsVariable* pv, int n, int ix_top, int j);
 
+static double Euler(DdsProcessor* p, DdsVariable* v)
+{
+    // <I> = <I> + <DR>*STEP()
+    return IS(INDEX(v)) + VALUE(RHSV(v,0)) * VALUE(STEP());
+}
 
 EXPORT(int) DdsComputeStatic(DDS_PROCESSOR ph)
 {
@@ -44,6 +49,10 @@ EXPORT(int) DdsComputeStatic(DDS_PROCESSOR ph)
 
 	if (STAGE() == 0) {
 		int m  = 0;
+
+        for (int i = 0; i < I_COUNT(); ++i) {
+            if(FUNCTION(IV(i))==nullptr) FUNCTION(IV(i)) = (ComputeVal)Euler;
+        }
 
 		// Initialize solver
 		for (int i = 0; i < B_COUNT(); ++i) {
@@ -63,16 +72,16 @@ EXPORT(int) DdsComputeStatic(DDS_PROCESSOR ph)
         // Compute everything at the first.
         ComputeStatic(p, V_TOP_ONCET());
         ComputeStatic(p, V_TOP_EVERYT());
-        ComputeStatic(p, V_TOP_ANYT());
-        STAGE() = DDS_COMPUTED_ALL;
-    } else  // STAGE() = DDS_COMPUTED_ANY_TIME must be reset to DDS_COMPUTED_EVERY_TIME after every integration steps.
-    if (STAGE() == DDS_COMPUTED_EVERY_TIME) {
-        ComputeStatic(p, V_TOP_EVERYT());
         STAGE() = DDS_COMPUTED_ANY_TIME;
     } else {
-        if (STAGE() == DDS_COMPUTED_ANY_TIME) {
-            ComputeStatic(p, V_TOP_ANYT());
-            STAGE() = DDS_COMPUTED_ALL;
+        if (STAGE() == DDS_COMPUTED_EVERY_TIME) {
+            ComputeStatic(p, V_TOP_EVERYT());
+            STAGE() = DDS_COMPUTED_ANY_TIME;
+        } else {
+            if (STAGE() == DDS_COMPUTED_ANY_TIME) {
+                ComputeStatic(p, V_TOP_ANYT());
+                STAGE() = DDS_COMPUTED_ALL;
+            }
         }
     }
     LEAVE(ph);
@@ -95,7 +104,8 @@ DdsVariable* Newton(DdsProcessor* p, DdsVariable* vf)
     bool   fOk  = false;
     double norm;
     int    ni   = 0;
-    int    max_iter = 1000;
+    if (p->max_iter <= 0) p->max_iter = 1000;
+    int    max_iter = p->max_iter;
 
     ASSERT(IS_FREE(vf));
     int ix_top      = INDEX(vf);        // INDEX to TV() & F_PAIRED()
@@ -118,39 +128,41 @@ DdsVariable* Newton(DdsProcessor* p, DdsVariable* vf)
             dx = 0.0;
             for (int i = 0; i < n; ++i) {
                 double d = DELTA(i) * fact;
-                MOVE_F(i, X(i) + d);
+                UPDATE_F(i, X(i) + d);
                 dx += fabs(d);
             }
             double t_norm = ComputeBlock(p, pv,Y_NEXTs());
             if (t_norm < norm) {
                 norm = t_norm;
-                MOVE(); ok = true;
+                UPDATE_XY(); ok = true;
                 if (CONVERGED()) break;
             } else {
+                // unable to move! restore old value.
+                for (int i = 0; i < n; ++i) UPDATE_F(i, X(i));
                 if (ok) break;
                 fact *= 0.1;
             }
         } while ( dx/norm > EPS() );
         if(!ok) {
             // Unable to decrease by Newton -> direct search
-            for (int i = 0; i < n; ++i) MOVE_F(i, X(i));
+            for (int i = 0; i < n; ++i) UPDATE_F(i, X(i));
             for (int i = 0; i < n; ++i) {
-                double t_fact = fact*10.0;
+                double t_fact = 0.5;
                 do {
-                    MOVE_F(i, X(i) + DELTA(i) * t_fact);
+                    UPDATE_F(i, X(i) + DELTA(i) * t_fact);
                     double t_norm = ComputeBlock(p, pv,Y_NEXTs());
                     if (t_norm < norm) {
-                        norm = t_norm; ok = true; MOVE_I(i);
+                        norm = t_norm; ok = true; UPDATE_XY_I(i);
                         break;
                     } else {
                         t_fact *= 0.1;
-                        MOVE_F(i, X(i) - DELTA(i) * t_fact);
+                        UPDATE_F(i, X(i) - DELTA(i) * t_fact);
                         t_norm = ComputeBlock(p, pv,Y_NEXTs());
                         if (t_norm < norm) {
-                            norm = t_norm; ok = true; MOVE_I(i); break;
+                            norm = t_norm; ok = true; UPDATE_XY_I(i); break;
                         } else {
                             // unable to move! restore old value.
-                            MOVE_F(i,X(i));
+                            UPDATE_F(i,X(i));
                         }
                     }
                 } while (t_fact > EPS());
@@ -172,6 +184,7 @@ double ComputeBlock(DdsProcessor* p,DdsVariable* pv,double *y)
     }
     ASSERT(IS_TARGETED(pv));
     do {
+        if (IS_DIVIDED(pv)) VALUE(pv) = VALUE(RHSV(pv,RHSV_COUNT(pv)));
         *y = VALUE(pv) - FUNCTION(pv)(p, pv);
         norm += fabs(*y++);
         pv = NEXT(pv);
@@ -208,7 +221,7 @@ static void Derivate(DdsProcessor *p,DdsVariable *pv,int n, int ix_top, int j)
     while (ok <= 0) {
         if (++ni > 100) THROW(DDS_ERROR_JACOBIAN, DDS_MSG_JACOBIAN);
         X(j) = xSave + dx;
-        MOVE_F(j, X(j));
+        UPDATE_F(j, X(j));
         double norm = ComputeBlock(p, pv,Y_NEXTs());
         if (norm <= EPS() * n) { dx = dx * 5.0; continue; }
         ok = 1;
@@ -218,7 +231,7 @@ static void Derivate(DdsProcessor *p,DdsVariable *pv,int n, int ix_top, int j)
         DX(j) = dx;
     }
     X(j) = xSave;
-    MOVE_F(j, X(j));
+    UPDATE_F(j, X(j));
 }
 
  //

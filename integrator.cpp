@@ -15,63 +15,126 @@
 #include "utils.h"
 #include "debug.h"
 
-#define EULER(dt) {for (int i = 0; i < I_COUNT(); ++i) {VALUE(IV(i)) = VALUE(RHSV(IV(i), 0)) * dt;}}
+#define K1s      ((p)->R_K1)
+#define K2s      ((p)->R_K2)
+#define K3s      ((p)->R_K3)
+#define K4s      ((p)->R_K4)
+#define K1(i)    (K1s[i])
+#define K2(i)    (K2s[i])
+#define K3(i)    (K3s[i])
+#define K4(i)    (K4s[i])
 
+static void RK(DdsProcessor* p);
+
+EXPORT(int) DdsComputeDynamic(DDS_PROCESSOR ph,int method)
+{
+	ENTER(ph);
+
+	ASSERT(VALUE(STEP()) > 0.0);
+
+	if (method != 0) {
+		if (method != DDS_I_EULER && method != DDS_I_RUNGE_KUTTA) THROW(DDS_ERROR_ARGUMENT, DDS_MSG_ARGUMENT);
+	} else {
+		method = METHOD();
+		if (method == 0) method = DDS_I_RUNGE_KUTTA;
+	}
+	METHOD() = method;
+
+	// Save current value
+
+	if (STAGE() == 0) {
+		double stp = VALUE(STEP());
+		if(I_COUNT()>0) ISs = (double*)MemAlloc(sizeof(double) * I_COUNT());
+		if (METHOD() == DDS_I_BW_EULER) VALUE(STEP()) = 0.0;
+		for (int i = 0; i < I_COUNT(); ++i) {
+			INDEX(IV(i)) = i;
+		}
+		for (int i = 0; i < I_COUNT(); ++i) IS(i) = VALUE(IV(i));
+		STATUS() = DdsComputeStatic(ph);
+		if (METHOD() == DDS_I_BW_EULER) VALUE(STEP()) = stp;
+		return STATUS();
+	}
+
+	if (I_COUNT() <= 0) return 0;
+	for (int i = 0; i < I_COUNT(); ++i) IS(i) = VALUE(IV(i));
+	STAGE() = DDS_COMPUTED_EVERY_TIME;
+	if (method == DDS_I_BW_EULER) {
+		// Integration is included in the algebraic computation.
+		STATUS() = DdsComputeStatic(ph);
+	} else {
+		// Integration: compute <I> at time = TIME()+STEP() 
+		if (method == DDS_I_EULER) { for (int i = 0; i < I_COUNT(); ++i) VALUE(IV(i)) = FUNCTION(IV(i))(p, IV(i)); }
+		else                         RK(p);
+		// Compute static-surface at the time = TIME()+STEP()
+		STATUS() = DdsComputeStatic(ph);
+	}
+	VALUE(TIME()) += VALUE(STEP());  // increment time
+	STAGE() = DDS_COMPUTED_ANY_TIME;
+	LEAVE(ph);
+	return STATUS();
+}
 //
 // Runge-Kutta integrator.
 //
-void RK(DdsProcessor* p, double dt)
+static void RK(DdsProcessor* p)
 {
+	int e = 0;
+	double dt = VALUE(STEP());
+	double time_save = VALUE(TIME());
+
 	if (I_COUNT() <= 0) return;
-	if (VtoDRs() == nullptr) {
-		VtoDRs() = (DdsVariable***)MemAlloc(sizeof(DdsVariable**)*I_COUNT());
-		int cv = VARIABLE_COUNT();
-		STACK(10);
-		for (int i = 0; i < I_COUNT(); ++i) {
-			DdsVariable* dr = RHSV(IV(i), 0);
-			ENABLE_BACKTRACK(DDS_FLAG_SET|DDS_FLAG_TARGETED|DDS_SFLAG_FREE|DDS_FLAG_INTEGRATED);
-			STACK_CLEAR();
-			PUSH(dr);
-			DdsVariable* pv;
-			while ((pv=PEEK()) != dr) {
-				if (pv == IV(i)) {POP(); break;}
-				MOVE_BACK(pv, DDS_FLAG_SET | DDS_FLAG_TARGETED | DDS_SFLAG_FREE);
-				if (INDEX(pv) < 0) POP();
-				else PUSH(RHSV(pv, INDEX(pv)));
-			}
-			VtoDR(i) = (DdsVariable**)MemAlloc(sizeof(DdsVariable*)*STACK_SIZE());
-			for (int j = 0; j < STACK_SIZE(); ++j) {
-				VtoDR(i)[j] = PEEK();
-				POP();
-			}
-		}
+	if (K1s == nullptr) {
+		K1s = (double*)MemAlloc(sizeof(double) * I_COUNT());
+		K2s = (double*)MemAlloc(sizeof(double) * I_COUNT());
+		K3s = (double*)MemAlloc(sizeof(double) * I_COUNT());
+		K4s = (double*)MemAlloc(sizeof(double) * I_COUNT());
 	}
 
-	auto COMPUTE_DR = [&](int i) {
-		DdsVariable** pv = VtoDR(i);
-		pv--;
-		do {
-			pv++;
-			VALUE(*pv) = FUNCTION(*pv)(p, *pv);
-		} while (!IS_DERIVATIVE(*pv));
-	};
-	//
-	// Following conditions are ignored because less value and more time consuming.
-	//  1. re-computing any block even if any variable on <F>-<T> route is on <I>-<DR> route.
-	//  2. effect on <V> variable on upstream of <DR>.
-	//
+	// K1
+	if (STAGE() == 0 ) e = DdsComputeStatic(p);
+	if (e != 0) THROW(e, "ERROR: DdsComputeStatic() for solving RUNGE-KUTTA method(K1). ");
 	for (int i = 0; i < I_COUNT(); ++i) {
-		double k1 = VALUE(RHSV(IV(i), 0));
-		double IV = VALUE(IV(i));
-		VALUE(IV(i)) = IV + k1 * dt / 2.0;
-		COMPUTE_DR(i);
-		double k2 = VALUE(RHSV(IV(i), 0));
-		VALUE(IV(i)) = IV+ k2 * dt / 2.0;
-		COMPUTE_DR(i);
-		double k3 = VALUE(RHSV(IV(i), 0));
-		VALUE(IV(i)) = IV + k3 * dt;
-		COMPUTE_DR(i);
-		double k4 = VALUE(RHSV(IV(i), 0));
-		VALUE(IV(i)) = IV + dt*(k1+2.0*(k2+k3)+k4)/6.0;
+		IS(i) = VALUE(IV(i));
+		K1(i) = VALUE(RHSV(IV(i), 0));
 	}
+
+	// K2
+	STAGE() = DDS_COMPUTED_EVERY_TIME;
+	VALUE(TIME()) += dt / 2.0;
+	for (int i = 0; i < I_COUNT(); ++i) {
+		VALUE(IV(i)) = IS(i) + dt*K1(i)/2.0;
+	}
+	e = DdsComputeStatic(p);
+	if (e != 0) THROW(e, "ERROR: DdsComputeStatic() for solving RUNGE-KUTTA method(K2). ");
+	for (int i = 0; i < I_COUNT(); ++i) {
+		K2(i) = VALUE(RHSV(IV(i), 0));
+	}
+
+	// K3
+	STAGE() = DDS_COMPUTED_EVERY_TIME;
+	for (int i = 0; i < I_COUNT(); ++i) {
+		VALUE(IV(i)) = IS(i) + dt * K2(i) / 2.0;
+	}
+	e = DdsComputeStatic(p);
+	if (e != 0) THROW(e, "ERROR: DdsComputeStatic() for solving RUNGE-KUTTA method(K3). ");
+	for (int i = 0; i < I_COUNT(); ++i) {
+		K3(i) = VALUE(RHSV(IV(i), 0));
+	}
+
+	// K4
+	VALUE(TIME()) += dt / 2.0;
+	STAGE() = DDS_COMPUTED_EVERY_TIME;
+	for (int i = 0; i < I_COUNT(); ++i) {
+		VALUE(IV(i)) = IS(i) + dt * K3(i);
+	}
+	e = DdsComputeStatic(p);
+	if (e != 0) THROW(e, "ERROR: DdsComputeStatic() for solving RUNGE-KUTTA method(K4). ");
+	for (int i = 0; i < I_COUNT(); ++i) {
+		K4(i) = VALUE(RHSV(IV(i), 0));
+	}
+
+	for (int i = 0; i < I_COUNT(); ++i) {
+		VALUE(IV(i)) = IS(i) + dt * (K1(i) + 2.0 * K2(i) + 2.0 * K3(i) + K4(i)) / 6.0;
+	}
+	VALUE(TIME()) = time_save;
 }

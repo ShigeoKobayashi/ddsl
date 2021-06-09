@@ -25,9 +25,14 @@
 #include "debug.h"
 
 
-EXPORT(int)  DdsCompileGraph(DDS_PROCESSOR p)
+EXPORT(int)  DdsCompileGraph(DDS_PROCESSOR p,int method)
 {
 	int e = 0;
+	if (method != DDS_I_EULER && method != DDS_I_BW_EULER && method != DDS_I_RUNGE_KUTTA && method != DDS_STEADY_STATE) 
+		return DDS_ERROR_ARGUMENT;
+	p->method = method;
+	if (method == DDS_I_BW_EULER) I_BACKTRACK() = 0;
+	else                          I_BACKTRACK() = DDS_FLAG_INTEGRATED;
 	DdsDbgPrintF(stdout, "Before processing:", p);
 	e = DdsSieveVariable(p);
 	DdsDbgPrintF(stdout, "After DdsSieveVariable(p)", p);
@@ -44,8 +49,6 @@ EXPORT(int)  DdsCompileGraph(DDS_PROCESSOR p)
 	return e;
 }
 
-
-
 #ifdef _DEBUG
 extern void PrintAllocCount(const char *msg);
 #endif
@@ -59,6 +62,9 @@ EXPORT(int)  DdsCreateProcessor(DDS_PROCESSOR* p, int nv)
 		pr->v_count = 0;
 		pr->v_max   = nv;
 		*p = (DDS_PROCESSOR)pr;
+		// Add TIME and STEP
+		DdsAddVariableV(pr, &pr->Time, "#TIME", DDS_FLAG_SET | DDS_FLAG_VOLATILE, 0.0, nullptr, 0);
+		DdsAddVariableV(pr, &pr->Step, "#STEP", DDS_FLAG_SET | DDS_FLAG_VOLATILE, 0.0, nullptr, 0);
 	}
 	catch (Exception &ex) {
 		return ex.Code;
@@ -68,6 +74,51 @@ EXPORT(int)  DdsCreateProcessor(DDS_PROCESSOR* p, int nv)
 		return DDS_ERROR_SYSTEM;
 	}
 	return 0;
+}
+
+EXPORT(DDS_VARIABLE)  DdsTime(DDS_PROCESSOR ph)
+{
+	DdsProcessor* p = (DdsProcessor*)ph;
+	return TIME();
+}
+EXPORT(DDS_VARIABLE)  DdsStep(DDS_PROCESSOR ph)
+{
+	DdsProcessor* p = (DdsProcessor*)ph;
+	return STEP();
+}
+
+EXPORT(void*)         DdsGetUserPTR(void* pv)
+{
+	return (void*)(*((void**)pv));
+}
+EXPORT(void*)         DdsSetUserPTR(void* pv, void* val)
+{
+	(*((void**)pv)) = val;
+	return (void*)(*((void**)pv));
+}
+
+EXPORT(double)        DdsGetEPS(DDS_PROCESSOR ph)
+{
+	DdsProcessor* p = (DdsProcessor*)ph;
+	return EPS();
+}
+EXPORT(double)        DdsSetEPS(DDS_PROCESSOR ph, double eps)
+{
+	DdsProcessor* p = (DdsProcessor*)ph;
+	if (eps > 0) EPS() = eps;
+	return EPS();
+}
+
+EXPORT(int)           DdsGetMaxIterations(DDS_PROCESSOR ph)
+{
+	DdsProcessor* p = (DdsProcessor*)ph;
+	return p->max_iter;
+}
+EXPORT(int)           DdsSetMaxIterations(DDS_PROCESSOR ph, int max)
+{
+	DdsProcessor* p = (DdsProcessor*)ph;
+	if (max > 0) p->max_iter = max;
+	return p->max_iter;
 }
 
 EXPORT(void) DdsFreeWorkMemory(DDS_PROCESSOR ph)
@@ -93,13 +144,12 @@ EXPORT(void) DdsFreeWorkMemory(DDS_PROCESSOR ph)
 	if (Y_NEXTs() != nullptr)      MemFree((void**)&(Y_NEXTs()));
 	if (SCALE() != nullptr)        MemFree((void**)&(SCALE()));
 	if (PIVOT() != nullptr)        MemFree((void**)&(PIVOT()));
-
-	if (VtoDRs() != nullptr) {
-		for (int i = 0; i < I_COUNT(); ++i) {
-			if(VtoDR(i)!=nullptr) MemFree((void**)&(VtoDR(i)));
-		}
-		MemFree((void**)&(VtoDRs()));
-	}
+	// RUNGE-KUTTA working arrays.
+	if (p->R_K1  != nullptr)        MemFree((void**)&(p->R_K1));
+	if (p->R_K2  != nullptr)        MemFree((void**)&(p->R_K2));
+	if (p->R_K3  != nullptr)        MemFree((void**)&(p->R_K3));
+	if (p->R_K4  != nullptr)        MemFree((void**)&(p->R_K4));
+	if (p->R_IVS != nullptr)        MemFree((void**)&(p->R_IVS));
 
 	T_COUNT() = 0;
 	B_COUNT() = 0;
@@ -122,6 +172,17 @@ EXPORT(void) DdsDeleteProcessor(DDS_PROCESSOR* ph)
 	PrintAllocCount("DdsDeleteProcessor()");
 #endif
 }
+
+EXPORT(double) DdsGetValue(DDS_VARIABLE v)
+{
+	return VALUE(((DdsVariable*)v));
+}
+EXPORT(double) DdsSetValue(DDS_VARIABLE v, double val)
+{
+	VALUE(((DdsVariable*)v)) = val;
+	return VALUE(((DdsVariable*)v));
+}
+
 
 EXPORT(DDS_VARIABLE*) DdsVariables(int *nv,DDS_PROCESSOR ph)
 {
@@ -146,16 +207,16 @@ static void AddVariable(DdsProcessor* p, DdsVariable* pv)
 	p->Vars[p->v_count++] = pv;
 }
 
-static DdsVariable* AllocVariable(const char* name, unsigned int f, double val, ComputeVal func, int nr)
+static DdsVariable* AllocVariable(DdsProcessor *p,const char* name, unsigned int f, double val, ComputeVal func, int nr)
 {
 	int l = strlen(name) + 3;
-	DdsVariable* v = (DdsVariable*)MemAlloc(sizeof(DdsVariable) + l + nr * sizeof(DdsVariable*));
+	DdsVariable* v = (DdsVariable*)MemAlloc(sizeof(DdsVariable) + l + (nr+ RHSV_EX()) * sizeof(DdsVariable*));
 	v->Function = (ComputeVal)func;
 	v->Value = val;
 	v->UFlag = DdsUserFlagOn((DDS_VARIABLE)v, f);
 	v->Nr = nr;
 	v->Rhsvs = (VARIABLE**)((char*)v + sizeof(DdsVariable));
-	v->Name = (char*)v->Rhsvs + sizeof(DdsVariable*) * nr;
+	v->Name = (char*)v->Rhsvs + sizeof(DdsVariable*) * (nr+ RHSV_EX());
 	strcpy(v->Name, name);
 	return v;
 }
@@ -163,7 +224,7 @@ static DdsVariable* AllocVariable(const char* name, unsigned int f, double val, 
 EXPORT(int)  DdsAddVariableA(DDS_PROCESSOR p, DDS_VARIABLE* pv, const char* name, unsigned int f, double val, ComputeVal func, int nr, DDS_VARIABLE** rhsvs)
 {
 	try {
-		DdsVariable* v = AllocVariable(name, f, val, func, nr);
+		DdsVariable* v = AllocVariable(p,name, f, val, func, nr);
 		for (int i = 0; i < nr; ++i) {
 			v->Rhsvs[i] = (VARIABLE*)rhsvs[i];
 		}
@@ -183,7 +244,7 @@ EXPORT(int)  DdsAddVariableA(DDS_PROCESSOR p, DDS_VARIABLE* pv, const char* name
 EXPORT(int)  DdsAddVariableV(DDS_PROCESSOR p, DDS_VARIABLE* pv, const char* name, unsigned int f, double val, ComputeVal func, int nr, ...)
 {
 	try {
-		DdsVariable* v = AllocVariable(name,  f, val, func, nr);
+		DdsVariable* v = AllocVariable(p,name,  f, val, func, nr);
 		va_list args;
 		va_start(args, nr);
 		for (int i = 0; i < nr; ++i) {
@@ -279,6 +340,19 @@ EXPORT(void) DdsDbgPrintF(FILE* f, const char* title, DDS_PROCESSOR p)
 	}
 }
 
+EXPORT(DDS_VARIABLE)  DdsGetVariableNext(DDS_VARIABLE hv)
+{
+	return NEXT(hv);
+}
+EXPORT(int)           DdsGetVariableIndex(DDS_VARIABLE hv)
+{
+	return INDEX(hv);
+}
+EXPORT(int)           DdsGetVariableScore(DDS_VARIABLE hv)
+{
+	return SCORE(hv);
+}
+
 EXPORT(int) DdsSetRHSV(DDS_VARIABLE hv,int i,DDS_VARIABLE rv)
 {
 	DdsVariable* pv = (DdsVariable*)hv;
@@ -287,7 +361,7 @@ EXPORT(int) DdsSetRHSV(DDS_VARIABLE hv,int i,DDS_VARIABLE rv)
 	return 0;
 }
 
-EXPORT(DDS_VARIABLE) DdsGetRHSV(DDS_VARIABLE hv, int i, DDS_VARIABLE rv)
+EXPORT(DDS_VARIABLE) DdsGetRHSV(DDS_VARIABLE hv, int i)
 {
 	DdsVariable* pv = (DdsVariable*)hv;
 	if (i < 0 || i >= RHSV_COUNT(pv)) return (DDS_VARIABLE)nullptr;
@@ -295,9 +369,10 @@ EXPORT(DDS_VARIABLE) DdsGetRHSV(DDS_VARIABLE hv, int i, DDS_VARIABLE rv)
 }
 
 
-EXPORT(int) DdsCheckVariable(DDS_VARIABLE hv)
+EXPORT(int) DdsCheckVariable(DDS_PROCESSOR ph,DDS_VARIABLE hv)
 {
-	DdsVariable* pv = (DdsVariable*)hv;
+	DdsProcessor* p = ph;
+	DdsVariable*  pv = (DdsVariable*)hv;
 	unsigned int f = USER_FLAG(pv) & DDS_FLAG_MASK;
 
 	SET_SFLAG_ON(pv, DDS_SFLAG_ERROR);
@@ -309,8 +384,13 @@ EXPORT(int) DdsCheckVariable(DDS_VARIABLE hv)
 	if (DDS_FLAG_OR(f, DDS_FLAG_TARGETED)) {
 		if(RHSV_COUNT(pv)<=0 || pv->Function==nullptr) return DDS_ERROR_FLAG;
 	}
+	// RHSVs of <I> must be (<DR>,Time,Step) Time & Step can be omitted.
 	if (DDS_FLAG_OR(f, DDS_FLAG_INTEGRATED)) {
-		if (RHSV_COUNT(pv) != 1) return DDS_ERROR_FLAG;
+		if (RHSV_COUNT(pv) != 1) {
+			if (RHSV_COUNT(pv) != 3)        return DDS_ERROR_FLAG;
+			if (RHSV(pv, 1) != VARIABLE(0)) return DDS_ERROR_FLAG;
+			if (RHSV(pv, 2) != VARIABLE(1)) return DDS_ERROR_FLAG;
+		}
 	}
 	if (DDS_FLAG_OR(f, DDS_FLAG_VOLATILE)) {
 		if (!DDS_FLAG_OR(f, DDS_FLAG_SET | DDS_FLAG_TARGETED)) return DDS_ERROR_FLAG;

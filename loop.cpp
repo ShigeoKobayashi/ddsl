@@ -33,7 +33,7 @@ EXPORT(int) DdsDivideLoop(DDS_PROCESSOR ph)
 		CLEAR_PROC_FLAG(pv);
 		SCORE(pv) = 0;
 		if (!IS_ALIVE(pv)) SET_SFLAG_ON(pv, DDS_SFLAG_CHECKED);
-		if (DDS_FLAG_OR(SYS_FLAG(pv), DDS_FLAG_SET | DDS_FLAG_TARGETED | DDS_FLAG_INTEGRATED | DDS_SFLAG_FREE)) {
+		if (DDS_FLAG_OR(SYS_FLAG(pv), DDS_FLAG_SET | DDS_FLAG_TARGETED | I_BACKTRACK() | DDS_SFLAG_FREE)) {
 			SET_SFLAG_ON(pv, DDS_SFLAG_CHECKED);
 		}
 	}
@@ -70,9 +70,9 @@ EXPORT(int) DdsDivideLoop(DDS_PROCESSOR ph)
 		STACK_CLEAR();
 		PUSH(nullptr);
 		PUSH_F(pv);
-		ENABLE_BACKTRACK(DDS_FLAG_SET | DDS_SFLAG_FREE | DDS_FLAG_TARGETED | DDS_FLAG_INTEGRATED | DDS_SFLAG_DIVIDED);
+		ENABLE_BACKTRACK(DDS_FLAG_SET | DDS_SFLAG_FREE | DDS_FLAG_TARGETED | I_BACKTRACK() | DDS_SFLAG_DIVIDED);
 		while ((pv = PEEK()) != nullptr) {
-			MOVE_BACK(pv, DDS_FLAG_SET | DDS_SFLAG_FREE | DDS_FLAG_TARGETED | DDS_FLAG_INTEGRATED| DDS_SFLAG_DIVIDED);
+			MOVE_BACK(pv, DDS_FLAG_SET | DDS_SFLAG_FREE | DDS_FLAG_TARGETED | I_BACKTRACK() | DDS_SFLAG_DIVIDED);
 			if (INDEX(pv) < 0) { POP_F(); }
 			else {
 				DdsVariable* rv = RHSV(pv, INDEX(pv));
@@ -101,12 +101,15 @@ EXPORT(int) DdsDivideLoop(DDS_PROCESSOR ph)
 		//
 		// create 1 more variable and set it to be <T>.
 		//
+		int re = RHSV_EX();
+		RHSV_EX() = 1;
 		int e = DdsAddVariableA(p, &pv, NAME(v_divided), USER_FLAG(v_divided), VALUE(v_divided), FUNCTION(v_divided), RHSV_COUNT(v_divided), (DDS_VARIABLE**)RHSVs(v_divided));
+		RHSV_EX() = re;
 		if (e != 0) THROW(e, "Can not divide a variable (or create a new variable) in DdsDivideLoop()");
 		SET_SFLAG_ON(pv       , SYS_FLAG(v_divided) | DDS_FLAG_TARGETED | DDS_SFLAG_DIVIDED | DDS_SFLAG_CHECKED);
 		SET_SFLAG_ON(v_divided,                       DDS_SFLAG_FREE    | DDS_SFLAG_DIVIDED | DDS_SFLAG_CHECKED);
 		int l = strlen(NAME(pv));
-		RHSV(v_divided, 0) = pv;   // This must be restored on Re-GRAPH
+		RHSV(pv, RHSV_COUNT(pv)) = v_divided;
 		((char*)NAME(pv))[l] = '+'; // sign of divided and added variable.
 	};
 

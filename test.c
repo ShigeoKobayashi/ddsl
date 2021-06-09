@@ -35,7 +35,7 @@ void Test1()
 		}
 	}
 	DdsUserFlagOn(V[0], DDS_FLAG_REQUIRED);
-	DdsCompileGraph(p);
+	DdsCompileGraph(p,DDS_I_EULER);
 	DdsDeleteProcessor(&p);
 	getchar();
 }
@@ -71,7 +71,7 @@ void Test1_1()
 		}
 	}
 	DdsUserFlagOn(V[0], DDS_FLAG_REQUIRED);
-	DdsCompileGraph(p);
+	DdsCompileGraph(p, DDS_I_EULER);
 	DdsDeleteProcessor(&p);
 	getchar();
 }
@@ -111,7 +111,7 @@ void Test2()
 	DdsAddVariableV(p, &Y[5], name, DDS_FLAG_TARGETED, 0.0, CompVal, 2, X[3], X[4]); name[1] += 1;
 	DdsAddVariableV(p, &Y[6], name, DDS_FLAG_TARGETED, 0.0, CompVal, 3, X[1], X[2], X[7]); name[1] += 1;
 	DdsAddVariableV(p, &Y[7], name, DDS_FLAG_TARGETED, 0.0, CompVal, 3, X[1], X[2], X[7]); name[1] += 1;
-	DdsCompileGraph(p);
+	DdsCompileGraph(p, DDS_I_EULER);
 	DdsDeleteProcessor(&p);
 	getchar();
 }
@@ -155,7 +155,7 @@ void Test2_1()
 	DdsAddVariableV(p, &Y[5], name, DDS_FLAG_TARGETED, 0.0, CompVal, 2, Z[3], Z[4]); name[1] += 1;
 	DdsAddVariableV(p, &Y[6], name, DDS_FLAG_TARGETED, 0.0, CompVal, 3, Z[1], Z[2], Z[7]); name[1] += 1;
 	DdsAddVariableV(p, &Y[7], name, DDS_FLAG_TARGETED, 0.0, CompVal, 3, Z[1], Z[2], Z[7]); name[1] += 1;
-	DdsCompileGraph(p);
+	DdsCompileGraph(p, DDS_I_EULER);
 	DdsDeleteProcessor(&p);
 	getchar();
 }
@@ -216,7 +216,7 @@ void Test2_2()
 	pV[0] = *((DDS_VARIABLE*)pV[0]);
 
 
-	DdsCompileGraph(p);
+	DdsCompileGraph(p, DDS_I_EULER);
 	DdsDeleteProcessor(&p);
 	getchar();
 }
@@ -254,7 +254,7 @@ void Test3()
 	DdsAddVariableV(p, &v1,   "1", DDS_FLAG_TARGETED, 0.0, CompVal, 1, v2);
 	DdsAddVariableV(p, &v11, "11", DDS_FLAG_TARGETED, 0.0, CompVal, 1, v12);
 	DdsAddVariableV(p, &v21, "21", DDS_FLAG_TARGETED, 0.0, CompVal, 1, v22);
-	DdsCompileGraph(p);
+	DdsCompileGraph(p, DDS_I_EULER);
 	DdsDeleteProcessor(&p);
 	getchar();
 }
@@ -301,7 +301,7 @@ void Test3_1()
 	DdsAddVariableV(p, &v1, "1", DDS_FLAG_TARGETED, 0.0, CompVal, 1, v2);
 	DdsAddVariableV(p, &v11, "11", DDS_FLAG_TARGETED, 0.0, CompVal, 1, v12);
 	DdsAddVariableV(p, &v21, "21", DDS_FLAG_TARGETED, 0.0, CompVal, 1, v22);
-	DdsCompileGraph(p);
+	DdsCompileGraph(p, DDS_I_EULER);
 	DdsDeleteProcessor(&p);
 	getchar();
 }
@@ -346,7 +346,7 @@ void Test0()
 	pV = DdsRhsvs(&nr, I2);
 	pV[0] = *((DDS_VARIABLE*)pV[0]);
 
-	DdsCompileGraph(p);
+	DdsCompileGraph(p, DDS_I_EULER);
 	DdsDeleteProcessor(&p);
 	getchar();
 }
@@ -362,20 +362,26 @@ double ans[] = { -1.0, 2.0, 3.0 };
 
 double CompVal1(DDS_PROCESSOR p, DDS_VARIABLE v)
 {
+	int nr;
 	DdsVariable* pv = (DdsVariable*)v;
-	return exp(((DdsVariable*)(pv->Rhsvs)[0])->Value) - 2.0;
+	DdsVariable** pVs = DdsRhsvs(&nr,pv);
+	return 1.0-2.0*DdsGetValue(pVs[0])- DdsGetValue(pVs[1]);
 }
 
-void Test()
+void TestDD()
 {
 	int i, j;
 
 	DDS_PROCESSOR p;
-	DDS_VARIABLE X;
-	DDS_VARIABLE* pVs,*pVr;
-	int nv,nr;
+	DDS_VARIABLE y0, y1, dy1;
+	DDS_VARIABLE* pVs, * pVr;
+	int nv, nr;
+
 	DdsCreateProcessor(&p, 1);
-	DdsAddVariableV(p, &X, "x", DDS_FLAG_REQUIRED, 0.0,CompVal1, 1, &X);
+	DdsAddVariableV(p, &y0, "y0", DDS_FLAG_INTEGRATED, 0.0, NULL, 1, &y1);
+	DdsAddVariableV(p, &y1, "y1", DDS_FLAG_INTEGRATED, 0.0, NULL, 1, &dy1);
+	DdsAddVariableV(p, &dy1, "dy1", DDS_FLAG_REQUIRED, 0.0, CompVal1, 2, &y1, &y0);
+
 
 	pVs = DdsVariables(&nv, p);
 	for (i = 0; i < nv; ++i) {
@@ -385,12 +391,14 @@ void Test()
 		}
 	}
 
-	DdsCompileGraph(p);
-	DdsComputeStatic(p);
-	DdsDbgPrintF(stdout, "After DdsComputeStatic(p)", p);
-	
-	DdsCompileGraph(p);
+	DdsCompileGraph(p, DDS_I_BW_EULER);
 
+	DdsSetValue(DdsStep(p), 0.5);
+	for (i = 0; i < 21; ++i) {
+		DdsComputeDynamic(p, 0);
+		printf(" %d) Time=%lf,Y=%lf\n", i, DdsGetValue(DdsTime(p)), DdsGetValue(y0));
+	}
+	DdsDbgPrintF(stdout, "After DdsComputeDynamic(p)", p);
 
 	DdsDeleteProcessor(&p);
 	getchar();
@@ -405,6 +413,84 @@ void Test()
 	Test3_1();
 */
 }
+
+double CompY(DDS_PROCESSOR p, DDS_VARIABLE v)
+{
+	/*
+	DDS_VARIABLE x = DdsGetRHSV(v, 0);
+	double xv = DdsGetValue(x);
+	return xv*xv;
+	*/
+	DDS_VARIABLE t = DdsGetRHSV(v, 0);
+	double tv = DdsGetValue(t);
+	return exp(-25.0 * tv);
+}
+
+double CompX(DDS_PROCESSOR p, DDS_VARIABLE v)
+{
+	DDS_VARIABLE y = DdsGetRHSV(v, 0);
+	double yv = DdsGetValue(y);
+	DDS_VARIABLE x = DdsGetRHSV(v, 1);
+	double xv = DdsGetValue(x);
+	return yv-xv+1.0;
+}
+
+double CompDY(DDS_PROCESSOR p, DDS_VARIABLE v)
+{
+	DDS_VARIABLE y = DdsGetRHSV(v, 0);
+	double yv = DdsGetValue(y);
+	return -25.0*yv;
+}
+
+
+void Test()
+{
+	int i, j;
+
+	DDS_PROCESSOR p;
+	DDS_VARIABLE time,step,y,yt,dy;
+	DDS_VARIABLE* pVs, * pVr;
+	int nv, nr;
+
+	DdsCreateProcessor(&p, 1);
+	DdsAddVariableV(p, &y, "y", DDS_FLAG_REQUIRED|DDS_FLAG_INTEGRATED, 1.0, NULL, 1, &dy);
+	DdsAddVariableV(p, &dy, "dy", 0, 1.0, CompDY, 1, &y);
+	DdsAddVariableV(p, &yt, "Y", DDS_FLAG_REQUIRED, 0.0, CompY, 1, &time);
+	time = DdsTime(p);
+	step = DdsStep(p);
+	pVs = DdsVariables(&nv, p);
+	for (i = 0; i < nv; ++i) {
+		pVr = DdsRhsvs(&nr, pVs[i]);
+		for (j = 0; j < nr; ++j) {
+			pVr[j] = *((DDS_VARIABLE*)pVr[j]);
+		}
+	}
+	DdsSetValue(step, 0.01);
+//	DdsCompileGraph(p, DDS_I_BW_EULER);
+//	DdsCompileGraph(p, DDS_I_RUNGE_KUTTA);
+	DdsCompileGraph(p, DDS_I_EULER);
+	for (i = 0; i < 10; ++i) {
+		DdsComputeDynamic(p,0);
+		DdsComputeStatic(p);
+		printf("T=%lf y=%lf Y=%lf\n", DdsGetValue(time), DdsGetValue(y), DdsGetValue(yt));
+	}
+	DdsDbgPrintF(stdout, "After DdsComputeStatic(p)", p);
+
+	DdsDeleteProcessor(&p);
+	getchar();
+	return;
+	/*
+		Test1();
+		Test1_1();
+		Test2();
+		Test2_1();
+		Test2_2();
+		Test3();
+		Test3_1();
+	*/
+}
+
+
 
 int main()
 {
