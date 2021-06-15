@@ -47,6 +47,8 @@ EXPORT(int) DdsSieveVariable(DDS_PROCESSOR ph)
 	}
 	DdsFreeWorkMemory(ph);
 
+	STAGE() = 0;
+
 	// check user flag and copy it to system flag.
 	{
 		// Check and copy user-flag to system-flag.
@@ -89,6 +91,17 @@ EXPORT(int) DdsSieveVariable(DDS_PROCESSOR ph)
 			if (RHSV_COUNT(pv) <= 0 && !IS_SET(pv)) {++cf; SET_SFLAG_ON(pv, DDS_SFLAG_FREE);}
 			if (IS_REQUIRED(pv)) ++cr;
 			if (IS_TARGETED(pv)) ++ct;
+			if (IS_INTEGRATED(pv) && METHOD() == DDS_STEADY_STATE) {
+				// Steady state computation
+				// <I> ==> <A>
+				SET_SFLAG_OFF(pv, DDS_FLAG_INTEGRATED);
+				SET_SFLAG_ON(pv, DDS_SFLAG_FREE);
+				DdsVariable* dr = RHSV(pv, 0);
+				SET_SFLAG_ON(dr, DDS_FLAG_TARGETED);
+				VALUE(dr) = 0.0;
+				++cf;
+				++ct;
+			}
 			for (int j = 0; j < RHSV_COUNT(pv); ++j) {
 				if (RHSV(pv, j) == nullptr) THROW(DDS_ERROR_NULL, DDS_MSG_NULL);
 			}

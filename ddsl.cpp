@@ -32,8 +32,11 @@ EXPORT(int)  DdsCompileGraph(DDS_PROCESSOR p,int method)
 	if (method != DDS_I_EULER && method != DDS_I_BW_EULER && method != DDS_I_RUNGE_KUTTA && method != DDS_STEADY_STATE) 
 		return DDS_ERROR_ARGUMENT;
 	p->method = method;
-	if (method == DDS_I_BW_EULER) I_BACKTRACK() = 0;
-	else                          I_BACKTRACK() = DDS_FLAG_INTEGRATED;
+	if (method == DDS_I_BW_EULER|| method == DDS_STEADY_STATE) I_BACKTRACK() = 0;
+	else                                                       I_BACKTRACK() = DDS_FLAG_INTEGRATED;
+
+	STAGE() = 0;
+
 	DdsDbgPrintF(stdout, "Before processing:", p);
 	e = DdsSieveVariable(p);
 	DdsDbgPrintF(stdout, "After DdsSieveVariable(p)", p);
