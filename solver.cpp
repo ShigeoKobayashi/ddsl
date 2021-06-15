@@ -118,19 +118,40 @@ DdsVariable* Newton(DdsProcessor* p, DdsVariable* vf)
     norm = ComputeBlock(p, pv,Ys());
     while(NOT_CONVERGED()) {
         // Not yet converged. => Compute Jacobian matrix
+        ++ni;
         ComputeJacobian(p,pv,n,ix_top);
         SolveJacobian(p,n);
         // Next estimation
-        double fact = 1.0;
+        double fact  = 1.0;
+        double ffact = 1.0;
         bool ok = false;
         double dx = 0;
         do {
-            dx = 0.0;
-            for (int i = 0; i < n; ++i) {
-                double d = DELTA(i) * fact;
-                UPDATE_F(i, X(i) + d);
-                dx += fabs(d);
-            }
+            bool too_much = false;
+            do {
+                double DX = 0.0;
+                dx        = 0.0;
+                double ff = fact * ffact;
+                too_much = false;
+                for (int i = 0; i < n; ++i) {
+                    double d = DELTA(i) * ff;
+                    UPDATE_F(i, X(i) + d);
+                    dx += fabs(d);
+                    DX += fabs(X(i));
+                }
+                if (ni > 1) {
+                    // Non-linear case
+                    if (DX < EPS()) DX = EPS();
+                    if (dx < EPS()) break;
+                    if ((DX / dx) < 0.0001) {
+                        // Update too much!!
+                        ffact *= 0.1;
+                        too_much = true;
+                    }
+                }
+            } while (too_much);
+
+            // try new X()
             double t_norm = ComputeBlock(p, pv,Y_NEXTs());
             if (t_norm < norm) {
                 norm = t_norm;
@@ -148,6 +169,10 @@ DdsVariable* Newton(DdsProcessor* p, DdsVariable* vf)
             for (int i = 0; i < n; ++i) UPDATE_F(i, X(i));
             for (int i = 0; i < n; ++i) {
                 double t_fact = 0.5;
+                double dxi = fabs(DELTA(i));
+                double xi  = fabs(X(i));
+                if (xi < EPS()) xi = EPS();
+                while ((xi / (dxi*t_fact)) < 0.0001) t_fact *= 0.1;
                 do {
                     UPDATE_F(i, X(i) + DELTA(i) * t_fact);
                     double t_norm = ComputeBlock(p, pv,Y_NEXTs());
@@ -168,7 +193,7 @@ DdsVariable* Newton(DdsProcessor* p, DdsVariable* vf)
                 } while (t_fact > EPS());
             }
         }
-        if (!ok || ++ni > max_iter) THROW(DDS_ERROR_CONVERGENCE, DDS_MSG_CONVERGENCE);
+        if (!ok || ni > max_iter) THROW(DDS_ERROR_CONVERGENCE, DDS_MSG_CONVERGENCE);
     }
     return NEXT(TV(ix_top + n - 1));
 }

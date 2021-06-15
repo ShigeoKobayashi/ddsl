@@ -94,7 +94,6 @@ static void RK(DdsProcessor* p)
 	if (STAGE() == 0 ) e = DdsComputeStatic(p);
 	if (e != 0) THROW(e, "ERROR: DdsComputeStatic() for solving RUNGE-KUTTA method(K1). ");
 	for (int i = 0; i < I_COUNT(); ++i) {
-		IS(i) = VALUE(IV(i));
 		K1(i) = VALUE(RHSV(IV(i), 0));
 	}
 

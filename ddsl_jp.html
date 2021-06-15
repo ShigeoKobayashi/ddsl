@@ -1,0 +1,290 @@
+﻿<!DOCTYPE html "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="jp">
+
+<head>
+<title>DDSL: Digital Dynamic Simulation Library for C/C++ (based on Graph Theory)</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<meta name="keywords" content="DDSL(Digital Dynamic Simulation Library for C/C++,based on Graph Theory)">
+<meta name="description" content="Digital Dynamic Simulation Library for C/C++">
+<style type=text/css>
+body {color: #3f0f0f; background: #efefef; margin-left: 4em; margin-right: 4em;}
+h1 {color: #f0f0f0; background-color: #30A0FF; border-color: #FF00FF; width: 100%;
+    border-style: solid; border-top-width: 0.1em; border-bottom-width: 0.1em; border-right: none;
+    border-left: none;   padding: 0.1em; font-weight: bold; font-size: 160%;text-align: center;
+}
+h2 {color: #00007f; background-color: #e7e7ff; border-color: #949494;
+    width: 100%; border-style: solid;
+    border-left: 0.6em solid #30A0FF;
+    border-right: none; border-top-width: 0.1em;
+    border-bottom-width: 0.1em;  padding: 0.1em;  font-weight: bold;  font-size: 110%;
+}
+h3 {color: #00007f; padding: 0.2em; font-size: 110%;
+    border-style: solid;
+    border-left: none; border-right: none; border-top-width: 0.05em;
+    border-bottom-width: 0.05em; 
+}
+h4, h5 { color: #000000; padding: 0.2em; font-size: 100%;}
+th {background: #e7e7ff;}
+td {background: #f3f7ff;}
+dt {margin-top: 0.2em;}
+caption { color: #7f0000;font-weight: bold;}
+pre { margin-top: 1px;}
+code { margin-top: 1px; color: #0000ff;}
+kbd { color: #ffffbf;font-weight: bold;}
+blockquote { margin-top: 0px;}
+</style>
+</head>
+
+<body>
+<hr/>
+<h1>DDSL: Digital Dynamic Simulation Library for C/C++ (based on Graph Theory)</h1>
+<hr/>
+<div align="right">
+This software can be redistributed under <a href="https://www.gnu.org/licenses/lgpl-3.0.en.html" target="_new">GNU Lesser General Public License</a>.<br/> And <a href="https://github.com/ShigeoKobayashi/ddsl/" target="_new">every source codes can be obtained through GitHub</a><br/>
+Copylight (c) 2020 Shigeo Kobayashi. All rights reserved.<br/>
+<a href="./ddsl_en.html">[==&gt;English]</a>
+</div>
+<hr/>
+<font size="1">
+I dedicate this software to two great scientists&amp;mathematicians,my former boss Junkichi Tunekawa and the professor Masao Iri. (They are no longer with us. This software is the proof that I had a time,although it was very short period,to work with them.)
+</font>
+<hr/>
+
+
+<b>DDSL(<U>D</U>igital <U>D</U>ynamic <U>S</U>imulation <U>L</U>ibrary for C/C++,based on Graph Theory)</b> is the library to assist numerical simulation for <b>dynamics and statics</b>.<br/>
+<b>DDSL</b> implements <b>Newton-method</b> for solving non-linear algebraic eqution systems for static simulation and <b>Euler,Backward Euler,and Runge-Kutta methods</b> for solving ordinary differential equation systems for dynamic simulation.<br/>
+The users,although,need not use these methos directly with the assistance of Graph-theory(about the theory,see <a href="#REF">References</a>.).
+
+<h2>Overview</h2>
+
+To utilize DDSL,the user must define at least one processor(DDS_PROCESSOR or DdsProcessor*) and more than or equal to one variable(DDS_VARIABLE or DdsVariable*).<br/>
+DDS_PROCESSOR(DdsProcessor*) and DDS_VARIABLE(DdsVariable*) are pointers of the structures defined in ddsl.h.<p/>
+<b>Note:</b> Include ddsl.h in the source code and link appropriate libraries(including DDSL library).<br/>
+<b>Note:</b> Any function name offered by this library has prefix "Dds".
+
+<h3>DDS_PROCESSOR</h3>
+The processor(DDS_PROCESSOR) keeps every variables(DDS_VARIABLE) and solves algebraic and ordinary differential equations.<br/>
+To define DDS_PROCESSOR:
+<pre><code>
+    DDS_PROCESSOR p;
+    int e = DdsCreateProcessor(&p,10);
+    if(e!=0) printf("DdsCreateProcessor() returned an error\n");
+</code></pre>
+DdsCreateProcessor(&p,10) allocates memories for DDS_PROCESSOR(DdsProcessor) structure and sets it's pointer to p. The second argument 10 is the number of variables(explained later) the DdsProcessor() can keep which will be automatically extended if necessary. DdsCreateProcessor() returns 0 if DdsProcessor is normally allocated,or returns non-zero error code.
+
+<h3>DDS_VARIABLE</h3>
+The variable(DDS_VARIABLE) has value(double),<a href="#FLAG">flags(attributes)</a>,and may have right hand side variables and function pointer to compute it's value.<br/>
+Variable(DDS_VARIABLE) must be registered to the processor(DDS_PROCESSOR) as:
+<table vorder="0">
+<tr><td>
+<img src="./fx.png">
+</td><td>
+<pre><code>
+    DDS_PROCESSOR p;
+    DDS_VARIABLE y,x1,x2;
+    DdsCreateProcessor(&p,10);
+    DdsAddVariableV(p,&x1, "x1", DDS_FLAG_SET, 1.0, NULL,0); /* Register x1 to p. */
+    DdsAddVariableV(p,&x2, "x2", DDS_FLAG_SET, 2.0, NULL,0);
+    DdsAddVariableV(p,&y,  "y",  DDS_FLAG_REQUIRED, 0.0, CompY,2,x1,x2);
+    DdsCompileGraph(p, 0); /* Check relations and determine computation order. */
+    DdsComputeStatic(p);   /* Compute variable's value according to defined(by DdsCompileGraph()) order. */
+    printf("Value: y=%lf x1=%lf x2=%lf\n",DdsGetValue(y),DdsGetValue(x1),DdsGetValue(x2));
+    /* ==&gt; Value: y=0.718282 x1=1.000000 x2=2.000000 */
+    DdsDeleteProcessor(&p);
+</code></pre>
+</td><td>
+<pre><code>
+   double CompY(DDS_PROCESSOR p, DDS_VARIABLE y)
+   {
+	DDS_VARIABLE x1 = DdsGetRHSV(y, 0);
+	DDS_VARIABLE x2 = DdsGetRHSV(y, 1);
+	double xv1 = DdsGetValue(x1);
+	double xv2 = DdsGetValue(x2);
+	return exp(xv1)-xv2;
+   }
+</code></pre>
+</td></tr>
+</table>
+<b>Note:</b> Functions used in the example may return non-zero value in case of error,which is ignored to be checked in this example.<p/>
+DdsAddVariableV() allocates memories for the variable and register it to the processor.<br/>
+For instance:<blockquote>
+  DdsAddVariableV(p,&amp;y,  "y",  DDS_FLAG_REQUIRED, 0.0, CompY,2,x1,x2)
+</blockquote>
+allocates memories of DDS_VARIABLE,sets it's pointer to &y,and register the newly allocated variable(y) to the processor p.
+Also DdsAddVariableV() sets flag DDS_FLAG_REQUIRED,value 0.0,function pointer to compute the value,and right hand side variables x1,x2(2 is the number of right hand side variables, x1,x2), to y. 
+The flag <b>DDS_FLAG_REQUIRED</b> is the specification that the value of the variable y is what the user wants to know.
+<blockquote>
+    DdsAddVariableV(p,&amp;x1, "x1", DDS_FLAG_SET, 1.0, nullptr,0)
+</blockquote>
+The flag <b>DDS_FLAG_SET</b> for x1 and x2 is a constant requirement,and the value specified (1.0 or 2.0) will never be changed even right hand variables are given.<br/>
+DdsCompileGraph(p, 0) checks relations and determine computation order,and
+ DdsComputeStatic(p) simply computes the required value of y.<br/>
+Instead of redundancy above,the user will obtain flexibility.
+If you change flags as:
+<pre><code>
+    DdsAddVariableV(p,&x1, "x1", DDS_FLAG_REQUIRED, 1.0, nullptr,0);
+    DdsAddVariableV(p,&y,  "y",  DDS_FLAG_TARGETED, 0.0, CompY,2,x1,x2);
+    /* ==&gt; Value: y=0.000000 x1=0.693148 x2=2.000000 */
+</code></pre>
+<b>DDS_FLAG_TARGETED</b> means that the value of y is to be 0.0 after computations. And the value of x1,which is not DDS_FLAG_SET this time,will be the value that make the value of y be 0.0.  DDSL creates (non-linear) equation(s) and solves it automatically according to the user's specifications.
+
+<h3>What the user must do:</h3>
+As described so far,the user must invoke:
+<ol>
+<li><b>DdsCreateProcessor()</b>...create a processor</li>
+<li><b>DdsAddVariableV()</b><br/>
+<b>DdsAddVariableA()</b>...create a variable and register it to the processor.
+    The user also sets the (initial) value of y,the right hand side variables (hereinafter referred to as <b>RHSV</b>),and the function to compute the value of y. The user also sets <b>FLAGS</b>(attributes) of y that determins the computation order.</li>
+<li><b>DdsCompileGraph()</b>... checks relations of each variable and determines computation order.</li>
+<li><b>DdsComputeStatic()</b> or<br/> 
+<b>DdsComputeDynamic()</b>... compute variable's value by solving non-linear equations or ordinary differential equations,according to the computation order determined by DdsCompileGraph().</li>
+<li><b>DdsDeleteProcessor()</b>... frees every memories allocated by the processor.</li>
+</ol>
+
+<h3>What DDSL can do:</h3>
+DDSL can:
+<ol>
+<li>remove variables having no contribution directly or indirectly for computing variables of DDS_FLAG_REQUIRED from any computation.</li>
+<li>construct computation order of each variable.</li>
+<li>automatically detect loop such as y=f(y),and rearrange it to the equation system as y1 = f(y2), y1-y2 =&gt;0.</li> 
+<li>automatically construct non-linear eqution sysytems and solve them.</li>
+<li>solve ordinally differential equations if given.</li>
+<li>obtain steady state by changing ordinally differential equations to algebraic equation systems and solve them.</li>
+</ol>
+How DDSL realizes these will be hereinafter described.
+
+<a name="FLAG" />
+<h2>Variable Flags</h2>
+The flags or attributes (see ddsl.h) are the most impotant part. A variable has two <b>unsigned int</b> element for <b>user's flags</b> and <b>system's flags</b>. User's flags are controled by the user and DDSL never change them. Flag is a 1-bit of unsigned integer which can be set or reset. DDSL checks user's flags and copies them to system's if they are correct. DDSL controls(set or reset) system's flag during the processing.<br/>
+More than one flags can be specified as:<br/>
+<pre><code>
+    DdsAddVariableV(p,&x2, "x2", DDS_FLAG_SET|DDS_FLAG_VOLATILE, 2.0, NULL,0);
+</code></pre>
+or
+<pre><code>
+    DdsSetUserFlag(x2,DDS_FLAG_SET|DDS_FLAG_VOLATILE);
+</code></pre>
+
+<b>Note:</b><blockquote>
+<b>Upstream</b>: In case like <b>y = f(u,v,w)</b>.  Variables u,v,and w are <b>upstream</b> variables of y.<br/>
+<b>Downstream</b>:  In case like <b>x = f(y)</b>. Variable x is <b>downstream</b> variables y.
+</blockquote>
+
+
+<table border="1" width="100%">
+<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
+<tr><th>User flag name</th><th>value</th><th>denoted:</th>
+<tr><td><b>DDS_FLAG_REQUIRED</b></td><td>0x00000001</td><td><b>&lt;R&gt;</b></td></tr>
+</table>
+<blockquote>
+The user must set this flag to any variable of which value is wanted.<br/>
+<b>If there is no variable of &lt;R&gt; flag,then nothing is computed.</b>
+</blockquote>
+
+<table border="1" width="100%">
+<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
+<tr><th>User flag name</th><th>value</th><th>denoted:</th>
+<tr><td><b>DDS_FLAG_SET</b></td><td>0x00000002</td><td><b>&lt;S&gt;</b></td></tr></table>
+
+<table width="100%">
+<tr><td><img src="./s.png"></td><td align="left">
+&lt;S&gt; is a constant specification.<br/>
+Any variable having this flag is never computed even RHSVs and the function to compute its value are defined.<br/>This specification may cause to divide one connected component into more than one.
+</td></tr>
+</table>
+<b>Note:</b><blockquote>
+<b>Connected component</b> is a group of variables that are connected directly or indirectly connected each other.</blockquote>
+
+<table border="1" width="100%">
+<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
+<tr><th>User flag name</th><th>value</th><th>denoted:</th>
+<tr><td><b>DDS_FLAG_TARGETED</b></td><td>0x00000004</td><td><b>&lt;T&gt;</b></td></tr>
+</table>
+
+<table width="100%">
+<tr><td><img src="./t.png"></td><td align="left">
+The value of &lt;T&gt; variable is to be specified value finally by solving non-linear equation. <br/>
+From downstream variables,&lt;T&gt; look like &lt;S&gt;. &lt;A&gt; variable must exist on the upstream of &lt;T&gt;.<br/>
+This specification may cause to divide one connected component into more than one.
+</td></tr>
+</table>
+
+
+<table border="1" width="100%">
+<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
+<tr><th>User flag name</th><th>value</th><th>denoted:</th>
+<tr><td><b>DDS_FLAG_INTEGRATED</b></td><td>0x00000008</td><td><b>&lt;I&gt;</b></td></tr></table>
+
+<table width="100%">
+<tr><td><img src="./i.png"></td><td align="left">
+Integration specification. &lt;I&gt; variable's value is computed by integration. &lt;I&gt; must have only 1 RHSV which is the derivative(&lt;DR&gt;)of the ordinary differential equation. The function pointer to compute(integrate) the value of &lt;I&gt; is not necessary because integration methods such as Euler,Backward Euler,and Runge-Kutta methods are built in.
+</td></tr>
+</table>
+
+<table border="1" width="100%">
+<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
+<tr><th>User flag name</th><th>value</th><th>denoted:</th>
+<tr><td><b>DDS_FLAG_DIVISIBLE</b></td><td>0x00000020</td><td><b>&lt;D&gt;</b></td></tr></table>
+<table width="100%">
+<tr><td><img src="./loop.png"></td><td align="left">
+</td></tr>
+</table>
+
+<table border="1" width="100%">
+<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
+<tr><th>User flag name</th><th>value</th><th>denoted:</th>
+<tr><td><b>DDS_FLAG_NON_DIVISIBLE</b></td><td>0x00000040</td><td><b>&lt;N&gt;</b></td></tr></table>
+
+<table border="1" width="100%">
+<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
+<tr><th>User flag name</th><th>value</th><th>denoted:</th>
+<tr><td><b>DDS_FLAG_VOLATILE</b></td><td>0x00000010</td><td><b>&lt;V&gt;</b></td></tr></table>
+
+
+
+#define DDS_FLAG_MASK           0x00000FFF  /* Mask */
+
+<h3>&lt;F&gt;-&lt;T&gt; route</h3>
+<table border="1" width="100%">
+<col width="30%">
+<col width="40%">
+<tr><td>
+<img src="./ft_route.png">
+</td><td>
+
+
+</td><td>
+<img src="./not_loop.png">
+</td><td>
+</table>
+
+<h3>Block triangular decomposition</h3>
+<table border="1" width="100%">
+<col width="30%">
+<tr><td>
+<img src="./block.png">
+</td><td>
+
+
+</td></tr>
+</table>
+
+<hr/>
+
+<a name="REF"/>
+<h2>References:</h2>
+<ul>
+<li>Masao Iri, Junkichi Tsunekawa, Keiji Yajima:The Graphical Techniques Used for a Chemical Process Simulator "JUSE GIFS". IFIP Congress. </li>
+<li>Dr. Kazuo Murota (auth.):Systems Analysis by Graphs and Matroids: Structural Solvability and Controllability
+(<a href="https://jp1lib.org/book/2264352/362f6b?id=2264352&secret=362f6b" target="_new">download PDF</a>)</li>
+<li>K.Yajima, J.Tsunekawa and S.Kobayashi(1981) : On equation - based dynamic simulation. Proceedings. 2nd World Congress of Chemical Engineering, 1981 Montreal, 1981</li>
+<li>K.Yajima, J.Tsunekawa, H.Shono, S.Kobayashi and D.J.Sebastian (1982) : On graph - theoretic techniques for large - scale process systems.
+ The International symposium on process systems engineering,Kyoto International Conference Hall, Kyoto Japan, August 23-27, 1982</li>
+</ul>
+
+<div align="right">
+Shigeo Kobayashi 2021-6-10
+</div>
+<hr/>
+</body>
+</html>

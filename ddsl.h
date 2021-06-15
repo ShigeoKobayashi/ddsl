@@ -242,11 +242,13 @@ EXPORT(int)           DdsCheckVariable(DDS_PROCESSOR ph, DDS_VARIABLE hv);
 EXPORT(DDS_VARIABLE)  DdsGetVariableNext(DDS_VARIABLE hv);
 EXPORT(int)           DdsGetVariableIndex(DDS_VARIABLE hv);
 EXPORT(int)           DdsGetVariableScore(DDS_VARIABLE hv);
+EXPORT(DDS_VARIABLE)  DdsGetVariableSequence(DDS_PROCESSOR ph,unsigned int seq);
+
+EXPORT(unsigned int)  DdsGetSystemFlag(DDS_VARIABLE hv);
+EXPORT(unsigned int)  DdsSetUserFlagOn(DDS_VARIABLE hv, unsigned int f);
+EXPORT(unsigned int)  DdsSetUserFlagOff(DDS_VARIABLE hv, unsigned int f);
 
 
-EXPORT(unsigned int)  DdsUserFlagOn(DDS_VARIABLE hv, unsigned int f);
-EXPORT(unsigned int)  DdsUserFlagOff(DDS_VARIABLE hv, unsigned int f);
-EXPORT(unsigned int)  DdsSystemFlag(DDS_VARIABLE hv);
 
 EXPORT(void)          DdsDbgPrintF(FILE* f, const char* title, DDS_PROCESSOR p);
 

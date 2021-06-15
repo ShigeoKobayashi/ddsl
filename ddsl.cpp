@@ -28,6 +28,7 @@
 EXPORT(int)  DdsCompileGraph(DDS_PROCESSOR p,int method)
 {
 	int e = 0;
+	if (method == 0) method = DDS_I_RUNGE_KUTTA;// default method
 	if (method != DDS_I_EULER && method != DDS_I_BW_EULER && method != DDS_I_RUNGE_KUTTA && method != DDS_STEADY_STATE) 
 		return DDS_ERROR_ARGUMENT;
 	p->method = method;
@@ -213,7 +214,7 @@ static DdsVariable* AllocVariable(DdsProcessor *p,const char* name, unsigned int
 	DdsVariable* v = (DdsVariable*)MemAlloc(sizeof(DdsVariable) + l + (nr+ RHSV_EX()) * sizeof(DdsVariable*));
 	v->Function = (ComputeVal)func;
 	v->Value = val;
-	v->UFlag = DdsUserFlagOn((DDS_VARIABLE)v, f);
+	v->UFlag = DdsSetUserFlagOn((DDS_VARIABLE)v, f);
 	v->Nr = nr;
 	v->Rhsvs = (VARIABLE**)((char*)v + sizeof(DdsVariable));
 	v->Name = (char*)v->Rhsvs + sizeof(DdsVariable*) * (nr+ RHSV_EX());
@@ -402,22 +403,48 @@ EXPORT(int) DdsCheckVariable(DDS_PROCESSOR ph,DDS_VARIABLE hv)
 	return 0;
 }
 
-EXPORT(unsigned int) DdsUserFlagOn(DDS_VARIABLE hv, unsigned int f)
+EXPORT(unsigned int) DdsSetUserFlagOn(DDS_VARIABLE hv, unsigned int f)
 {
 	DdsVariable* pv = (DdsVariable*)hv;
 	USER_FLAG(pv) |= f; // Set bits for user.
 	return USER_FLAG(pv);
 }
 
-EXPORT(unsigned int) DdsUserFlagOff(DDS_VARIABLE hv, unsigned int f)
+EXPORT(unsigned int) DdsSetUserFlagOff(DDS_VARIABLE hv, unsigned int f)
 {
 	DdsVariable* pv = (DdsVariable*)hv;
 	USER_FLAG(pv) &= (~f);
 	return USER_FLAG(pv);
 }
 
-EXPORT(unsigned int) DdsSystemFlag(DDS_VARIABLE hv)
+EXPORT(unsigned int) DdsGetSystemFlag(DDS_VARIABLE hv)
 {
 	DdsVariable* pv = (DdsVariable*)hv;
 	return SYS_FLAG(pv);
+}
+
+EXPORT(unsigned int) DdsGetUserFlag(DDS_VARIABLE hv)
+{
+	DdsVariable* pv = (DdsVariable*)hv;
+	return USER_FLAG(pv);
+}
+
+EXPORT(unsigned int) DdsSetUserFlag(DDS_VARIABLE hv,unsigned int f)
+{
+	DdsVariable* pv = (DdsVariable*)hv;
+	USER_FLAG(pv) = f;
+	return USER_FLAG(pv);
+}
+
+EXPORT(DDS_VARIABLE)  DdsGetVariableSequence(DDS_PROCESSOR ph, unsigned int seq)
+{
+	DdsProcessor* p = (DdsProcessor*)ph;
+	switch (seq) {
+	case DDS_COMPUTED_ONCE:       return V_TOP_ONCET();
+	case DDS_COMPUTED_EVERY_TIME: return V_TOP_EVERYT();
+	case DDS_COMPUTED_ANY_TIME:   return V_TOP_ANYT();
+	default:
+		ASSERT(false);
+	}
+	return nullptr;
 }
