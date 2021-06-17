@@ -91,15 +91,23 @@ EXPORT(DDS_VARIABLE)  DdsStep(DDS_PROCESSOR ph)
 	return STEP();
 }
 
-EXPORT(void*)         DdsGetUserPTR(void* pv)
+EXPORT(void*)         DdsGetProcessorUserPTR(DDS_PROCESSOR ph)
 {
-	return (void*)(*((void**)pv));
+	return (void*)(*((void**)ph));
 }
-EXPORT(void*)         DdsSetUserPTR(void* pv, void* val)
+EXPORT(void)          DdsSetProcessorUserPTR(DDS_PROCESSOR ph, void* val)
 {
-	(*((void**)pv)) = val;
-	return (void*)(*((void**)pv));
+	(*((void**)ph)) = val;
 }
+EXPORT(void*)         DdsGetVariableUserPTR(DDS_VARIABLE v)
+{
+	return (void*)(*((void**)v));
+}
+EXPORT(void)          DdsSetVariableUserPTR(DDS_VARIABLE v, void* val)
+{
+	(*((void**)v)) = val;
+}
+
 
 EXPORT(double)        DdsGetEPS(DDS_PROCESSOR ph)
 {

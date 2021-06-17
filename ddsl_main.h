@@ -9,6 +9,7 @@
 #define  __INC_DDSL_MAIN__
 
 #include <vector>
+#include <math.h>
 #include "ddsl.h"
 #include "debug.h"
 

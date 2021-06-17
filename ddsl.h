@@ -221,18 +221,19 @@ EXPORT(int)           DdsAddVariableA(DDS_PROCESSOR p, DDS_VARIABLE* pv, const c
 EXPORT(int)           DdsCompileGraph(DDS_PROCESSOR p,int method);
 EXPORT(int)           DdsComputeStatic(DDS_PROCESSOR ph);
 EXPORT(int)           DdsComputeDynamic(DDS_PROCESSOR ph,int method);
+EXPORT(DDS_VARIABLE)  DdsGetVariableSequence(DDS_PROCESSOR ph, unsigned int seq);
 EXPORT(DDS_VARIABLE)  DdsTime(DDS_PROCESSOR ph);
 EXPORT(DDS_VARIABLE)  DdsStep(DDS_PROCESSOR ph);
 EXPORT(double)        DdsGetEPS(DDS_PROCESSOR ph);
 EXPORT(double)        DdsSetEPS(DDS_PROCESSOR ph, double eps);
 EXPORT(int)           DdsGetMaxIterations(DDS_PROCESSOR ph);
 EXPORT(int)           DdsSetMaxIterations(DDS_PROCESSOR ph, int max);
-EXPORT(void*)         DdsGetUserPTR(void* pv);
-EXPORT(void*)         DdsSetUserPTR(void* pv,void* val);
-
-
+EXPORT(void*)         DdsGetProcessorUserPTR(DDS_PROCESSOR ph);
+EXPORT(void)          DdsSetProcessorUserPTR(DDS_PROCESSOR ph,void* val);
 EXPORT(DDS_VARIABLE*) DdsVariables(int* nv, DDS_PROCESSOR p);
 
+EXPORT(void*)         DdsGetVariableUserPTR(DDS_VARIABLE v);
+EXPORT(void)          DdsSetVariableUserPTR(DDS_VARIABLE v, void* val);
 EXPORT(double)        DdsGetValue(DDS_VARIABLE v);
 EXPORT(double)        DdsSetValue(DDS_VARIABLE v,double val);
 EXPORT(DDS_VARIABLE*) DdsRhsvs(int* nr, DDS_VARIABLE v);
@@ -242,16 +243,13 @@ EXPORT(int)           DdsCheckVariable(DDS_PROCESSOR ph, DDS_VARIABLE hv);
 EXPORT(DDS_VARIABLE)  DdsGetVariableNext(DDS_VARIABLE hv);
 EXPORT(int)           DdsGetVariableIndex(DDS_VARIABLE hv);
 EXPORT(int)           DdsGetVariableScore(DDS_VARIABLE hv);
-EXPORT(DDS_VARIABLE)  DdsGetVariableSequence(DDS_PROCESSOR ph,unsigned int seq);
 
 EXPORT(unsigned int)  DdsGetSystemFlag(DDS_VARIABLE hv);
 EXPORT(unsigned int)  DdsSetUserFlagOn(DDS_VARIABLE hv, unsigned int f);
 EXPORT(unsigned int)  DdsSetUserFlagOff(DDS_VARIABLE hv, unsigned int f);
 
 
-
 EXPORT(void)          DdsDbgPrintF(FILE* f, const char* title, DDS_PROCESSOR p);
-
 EXPORT(int)           DdsSieveVariable(DDS_PROCESSOR ph);
 EXPORT(int)           DdsDivideLoop(DDS_PROCESSOR ph);
 EXPORT(int)           DdsCheckRouteFT(DDS_PROCESSOR ph);

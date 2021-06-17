@@ -588,7 +588,7 @@ int TestNL2()
 	return 0;
 }
 
-double CompDY2(DDS_PROCESSOR p, DDS_VARIABLE y)
+double CompDYDT(DDS_PROCESSOR p, DDS_VARIABLE y)
 {
 	DDS_VARIABLE A = DdsGetRHSV(y, 0);
 	DDS_VARIABLE B = DdsGetRHSV(y, 1);
@@ -617,7 +617,7 @@ int main()
 	DdsAddVariableV(p, &B, "B", DDS_FLAG_SET, 2.0, NULL, 0);
 	DdsAddVariableV(p, &C, "C", DDS_FLAG_SET, 3.0, NULL, 0);
 	DdsAddVariableV(p, &y, "y", DDS_FLAG_REQUIRED|DDS_FLAG_INTEGRATED, 1.0, NULL,1, &dydt);
-	DdsAddVariableV(p, &dydt, "dydt", DDS_FLAG_REQUIRED, 0.0, CompDY2, 4,&A,&B,&C,&y);
+	DdsAddVariableV(p, &dydt, "dy/dt", DDS_FLAG_REQUIRED, 0.0, CompDYDT, 4,&A,&B,&C,&y);
 	time = DdsTime(p);
 	step = DdsStep(p);
 
@@ -631,14 +631,13 @@ int main()
 
 	DdsSetValue(step, 0.1);
 	DdsCompileGraph(p, 0);
-	for (i = 0; i < 100; ++i) {
+	for (i = 0; i < 11; ++i) {
 		DdsComputeDynamic(p,0);
-		printf("Time=%lf dydt=%lf y=%lf\n", DdsGetValue(time), DdsGetValue(dydt), DdsGetValue(y));
+		printf("Dynamic:Time=%lf dydt=%lf y=%lf\n", DdsGetValue(time), DdsGetValue(dydt), DdsGetValue(y));
 	}
 	DdsCompileGraph(p, DDS_STEADY_STATE);
 	DdsComputeStatic(p);
-	printf("Time=%lf dydt=%lf y=%lf\n", DdsGetValue(time), DdsGetValue(dydt), DdsGetValue(y));
-
+	printf("Steady :Time=%lf dydt=%lf y=%lf\n", DdsGetValue(time), DdsGetValue(dydt), DdsGetValue(y));
 	DdsDeleteProcessor(&p);
 	getchar();
 }
