@@ -383,7 +383,7 @@ void TestDD()
 	DdsAddVariableV(p, &dy1, "dy1", DDS_FLAG_REQUIRED, 0.0, CompVal1, 2, &y1, &y0);
 
 
-	pVs = DdsVariables(&nv, p);
+	pVs = DdsGetVariables(&nv, p);
 	for (i = 0; i < nv; ++i) {
 		pVr = DdsRhsvs(&nr, pVs[i]);
 		for (j = 0; j < nr; ++j) {
@@ -459,7 +459,7 @@ void TestI()
 	DdsAddVariableV(p, &yt, "Y", DDS_FLAG_REQUIRED, 0.0, CompY1, 1, &time);
 	time = DdsTime(p);
 	step = DdsStep(p);
-	pVs = DdsVariables(&nv, p);
+	pVs = DdsGetVariables(&nv, p);
 	for (i = 0; i < nv; ++i) {
 		pVr = DdsRhsvs(&nr, pVs[i]);
 		for (j = 0; j < nr; ++j) {
@@ -547,7 +547,7 @@ void TestNL()
 	DdsAddVariableV(p, &x, "x", DDS_FLAG_REQUIRED, 0.0, NULL, 0);
 	DdsAddVariableV(p, &y, "y", DDS_FLAG_REQUIRED, 0.0, NULL, 0);
 
-	pVs = DdsVariables(&nv, p);
+	pVs = DdsGetVariables(&nv, p);
 	for (i = 0; i < nv; ++i) {
 		pVr = DdsRhsvs(&nr, pVs[i]);
 		for (j = 0; j < nr; ++j) {
@@ -621,7 +621,7 @@ int main()
 	time = DdsTime(p);
 	step = DdsStep(p);
 
-	pVs = DdsVariables(&nv, p);
+	pVs = DdsGetVariables(&nv, p);
 	for (i = 0; i < nv; ++i) {
 		pVr = DdsRhsvs(&nr, pVs[i]);
 		for (j = 0; j < nr; ++j) {

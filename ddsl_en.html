@@ -24,9 +24,10 @@ h3 {color: #00007f; padding: 0.2em; font-size: 110%;
     border-bottom-width: 0.05em; 
 }
 h4, h5 { color: #000000; padding: 0.2em; font-size: 100%;}
-th {background: #e7e7ff;}
-td {background: #f3f7ff;}
-dt {margin-top: 0.2em;}
+table {border-style: solid; border-width: 1px; border-color: #00007f;border-right: 0px; }
+th {background: #e7e7ff; border-color: #00007f; border-width: 1px; border-style: solid; border-left: 0px; border-top: 0px;}
+td {background: #f3f7ff; border-color: #00007f; border-width: 1px; border-style: solid; border-left: 0px; border-bottom: 0px; border-top: 0px;}
+dt {margin-top: 0.2em; border-width: 0px;}
 caption { color: #7f0000;font-weight: bold;}
 pre { margin-top: 1px;}
 code { margin-top: 1px; color: #0000ff;}
@@ -48,15 +49,16 @@ Copylight (c) 2020 Shigeo Kobayashi. All rights reserved.<br/>
 
 
 <b>DDSL(<U>D</U>igital <U>D</U>ynamic <U>S</U>imulation <U>L</U>ibrary for C/C++,based on Graph Theory)</b> is the library to assist numerical simulation for <b>dynamics and statics</b>.<br/>
-<b>DDSL</b> implements <b>Newton-method</b> for <a href="TRIANGULAR">solving non-linear algebraic eqution systems,?a> for static simulation and <b>Euler,Backward Euler,and Runge-Kutta methods</b> for <a href="INTEGRATED">solving ordinary differential equation systems</a> for dynamic simulation.<br/>
-The users,although,need not use these methos directly with the assistance of Graph-theory(about the theory,see <a href="#REF">References</a>.).
+<b>DDSL</b> implements <b>Newton-method</b> for <a href="#TRIANGULAR">solving non-linear algebraic eqution systems<a> for static simulation and <b>Euler,Backward Euler,and Runge-Kutta methods</b> for <a href="#INTEGRATED">solving ordinary differential equation systems</a> for dynamic simulation.<br/>
+The users,although,need not use these methos directly with the assistance of Graph-theory(about the theory,see <a href="#REF">References</a>.).<br/>
+DDSL automaticaly determines computation sequence,constructs non-linear equation and ordinary differential equation systems if necessary,and solve them.
 
 <h2>Overview</h2>
 
 To utilize DDSL,the user must define at least one processor(<a href="#PROCESSOR">DDS_PROCESSOR or DdsProcessor*</a>) and more than or equal to one variable(<a href="#VARIABLE">DDS_VARIABLE or DdsVariable*</a>).<br/>
 DDS_PROCESSOR(DdsProcessor*) and DDS_VARIABLE(DdsVariable*) are pointers of the structures defined in ddsl.h.<p/>
 <b>Note:</b> Include ddsl.h in the source code and link appropriate libraries(including DDSL library).<br/>
-<b>Note:</b> Any function name offered by this library has prefix "Dds".
+<b>Note:</b> Any name offered by this library has prefix "DDS_" or "Dds".
 
 <a name="PROCESSOR"/>
 <h3>DDS_PROCESSOR</h3>
@@ -67,14 +69,16 @@ To define DDS_PROCESSOR:
     int e = DdsCreateProcessor(&p,10);
     if(e!=0) printf("DdsCreateProcessor() returned an error\n");
 </pre></code>
-DdsCreateProcessor(&p,10) allocates memories for DDS_PROCESSOR(DdsProcessor) structure and sets it's pointer to p. The second argument 10 is the number of variables(explained later) the DdsProcessor() can keep which will be automatically extended if necessary. DdsCreateProcessor() returns 0 if DdsProcessor is normally allocated,or returns non-zero error code.<p/>
+<a href="#DdsCreateProcessor">DdsCreateProcessor(&p,10)</a> allocates memories for DDS_PROCESSOR(DdsProcessor) structure and sets it's pointer to p. The second argument 10 is the number of variables(explained later) the DdsProcessor() can keep which will be automatically extended if necessary. DdsCreateProcessor() returns 0 if DdsProcessor is normally allocated,or returns non-zero error code.<p/>
 <b>Note:</b>DdsCreateProcessor() automatically allocates default variables,<b>time</b> and integration <b>step</b>,internally.
 
 <a name="VARIABLE"/>
 <h3>DDS_VARIABLE in the simple static example</h3>
-The variable(DDS_VARIABLE) has value(double),<a href="#FLAG">flags(attributes)</a>,and may have right hand side variables(hereinafter referred to as <b>RHSV</b>s) and function pointer to compute it's value.<br/>
-Variable(DDS_VARIABLE) must be registered to the processor(DDS_PROCESSOR) as:
-<table vorder="0">
+The variable(DDS_VARIABLE) has value(double),<a href="#FLAG">flags/attributes(unsigned int)</a>,and may have right hand side variables(hereinafter referred to as <b>RHSV</b>s) and function pointer to compute it's value.<br/>
+<b>Note:</b> The user must not change the variable's value or any other's within that function.
+<p/>
+Variables must be registered to the processor(DDS_PROCESSOR) as:
+<table width="100%">
 <tr><td>
 <img src="./fx.png">
 </td><td>
@@ -104,30 +108,29 @@ Variable(DDS_VARIABLE) must be registered to the processor(DDS_PROCESSOR) as:
 </pre></code>
 </td></tr>
 </table>
-<b>Note:</b>Functions used in the example may return non-zero value in case of error,which is ignored to be checked to make the example be simple.<br/>
-<b>Note:</b>Details of each API functions are explained later.<p/>
+<b>Note:</b>Functions used in the example may return non-zero value in case of error,that is ignored to make the example be simple.<p/>
 
-<b>DdsAddVariableV(p,&amp;y,  "y",  DDS_FLAG_REQUIRED, 0.0, CompY,2,x1,x2)</b><br/>
-allocates memories of DDS_VARIABLE,sets it's pointer to &y,and register the newly allocated variable(y) to the processor p.
-Also DdsAddVariableV() sets flag DDS_FLAG_REQUIRED,value 0.0,function pointer(<b>CompY</b>) to compute the value of y,and right hand side variables x1,x2(2 is the number of right hand side variables, x1,x2), to y. 
+<a href="#DdsAddVariableV">DdsAddVariableV(p,&amp;y,  "y",  DDS_FLAG_REQUIRED, 0.0, CompY,2,x1,x2)</a><br/>
+allocates memories of DDS_VARIABLE,sets it's pointer to &y,and register the newly allocated variable(y) to the processor p.<br/>
+Also DdsAddVariableV() sets flag <a href="#REQUIRED">DDS_FLAG_REQUIRED</a>,value 0.0,function pointer(<b>CompY</b>) to compute the value of y,and right hand side variables x1,x2(2 is the number of right hand side variables, x1,x2), to y. 
 The flag <b>DDS_FLAG_REQUIRED</b> is the specification that the value of the variable y is what the user wants to know.<p/>
-<b>DdsAddVariableV(p,&amp;x1, "x1", DDS_FLAG_SET, 1.0, nullptr,0)</b><br/>
-The flag <b>DDS_FLAG_SET</b> for x1 and x2 is a constant requirement,and the value specified (1.0 or 2.0) will never be changed even right hand variables are given.<p/>
-<b>DdsCompileGraph(p, 0)</b> checks relations and determines computation order,and
-<b>DdsComputeStatic(p)</b> simply computes the required value of y.<p/>
+<b>DdsAddVariableV(p,&amp;x1, "x1", DDS_FLAG_SET, 1.0, NULL,0)</b><br/>
+The flag <a href="#SET">DDS_FLAG_SET</a> for x1 and x2 is a constant requirement,and the value specified (1.0 or 2.0) will never be changed even right hand variables are given.<p/>
+<a href="#DdsCompileGraph">DdsCompileGraph(p, 0)</a> checks relations and determines computation order,and
+<a href="#DdsComputeStatic">DdsComputeStatic(p)</a> simply computes the required value of y.<p/>
 Instead of redundancy above,the user will obtain flexibility.<br/>
 If the flags are changed to as:
 <code><pre>
-    DdsAddVariableV(p,&x1, "x1", DDS_FLAG_REQUIRED, 1.0, nullptr,0);
+    DdsAddVariableV(p,&x1, "x1", DDS_FLAG_REQUIRED, 1.0, NULL,0);
     DdsAddVariableV(p,&y,  "y",  DDS_FLAG_TARGETED, 0.0, CompY,2,x1,x2);
     /* ==&gt; Value: y=0.000000 x1=0.693148 x2=2.000000 */
 </pre></code>
-<b>DDS_FLAG_TARGETED</b> means that the value of y is to be 0.0 after computations. And the value of x1,which is not DDS_FLAG_SET this time,will be the value that make the value of y be 0.0.  DDSL creates (non-linear) equation(s) and solves it automatically according to the user's specifications.<p/>
+<a href="#TARGETED">DDS_FLAG_TARGETED</a> means that the value of y is to be 0.0 after computations. And the value of x1,which is not DDS_FLAG_SET this time,will be the value that make the value of y be 0.0.  DDSL creates (non-linear) equation(s) and solves it automatically according to the user's specifications.<p/>
 <b>Note:</b> Flags can be freely changed after DdsAddVariableV().
 
 <h3>DDS_FLAG_INTEGRATED and DDS_STEADY_STATE dynamic example</h3>
-The next example demonstrates the integration(dynamic) and the computation of <b>the steady state</b>.
-<table vorder="0">
+The next example demonstrates the integration(dynamic) and the computation of <a href="#INTEGRATED">the steady state</a>.
+<table width="100%">
 <tr><td>
 <img src="./i.png">
 </td><td>
@@ -147,7 +150,7 @@ The next example demonstrates the integration(dynamic) and the computation of <b
 	DdsAddVariableV(p, &dydt, "dy/dt", DDS_FLAG_REQUIRED, 0.0, CompDYDT, 4,&A,&B,&C,&y);
 	time = DdsTime(p);
 	step = DdsStep(p);
-	pVs = DdsVariables(&nv, p);
+	pVs = DdsGetVariables(&nv, p);
 	for (i = 0; i < nv; ++i) {
 		pVr = DdsRhsvs(&nr, pVs[i]);
 		for (j = 0; j < nr; ++j) {
@@ -199,11 +202,12 @@ Steady :Time=1.000000 dydt=0.000000 y=5.000000
 </pre></code>
 </td></tr>
 </table>
+<a name="RHSV" />
 Any RHSV of any variable must be registered to the processor before calling DdsCompileGraph().
-But this is sometimes difficult in programing,especially the case of loop.<br/>
+But this is sometimes difficult in programing(when DdsAddVariableV() is called),especially the case of loop.<br/>
 The following codes(extracted from above) avoid the difficulties.
 <code><pre>
-	pVs = DdsVariables(&nv, p);
+	pVs = DdsGetVariables(&nv, p);
 	for (i = 0; i < nv; ++i) {
 		pVr = DdsRhsvs(&nr, pVs[i]);
 		for (j = 0; j < nr; ++j) {
@@ -211,7 +215,9 @@ The following codes(extracted from above) avoid the difficulties.
 		}
 	}
 </pre></code>
-<b>Note that</b> all RHSVs of any variable are all pointers this time(ex:DdsAddVariableV(p, &amp;dydt, "dy/dt", DDS_FLAG_REQUIRED, 0.0, CompDYDT, 4,<b>&amp;A,&amp;B,&amp;C,&amp;y</b>)).<p/>
+<b>Note:</b> All RHSVs of any variable are all pointers this time(ex:DdsAddVariableV(p, &amp;dydt, "dy/dt", DDS_FLAG_REQUIRED, 0.0, CompDYDT, 4,<b>&amp;A,&amp;B,&amp;C,&amp;y</b>)).<br/>
+<b>Note:</b> DdsAddVariableV() never check any RHSV given(so RHSV can even be NULL). <p/>
+
 <b>DdsAddVariableV(p, &y, "y", DDS_FLAG_REQUIRED|DDS_FLAG_INTEGRATED, 1.0, NULL,1, &dydt)</b><br/>
 means that the y,which has <b>DDS_FLAG_INTEGRATED</b> flag,is computed by dydt through integration.<br/>
 All variables other than y are computed at the specific time(on the specific time plain).<br/>
@@ -220,34 +226,32 @@ y,on the other hand, is computed(integrated) when time is incremented.<br/>
 <b>DdsComputeDynamic(p,0)</b> integrates all variables of DDS_FLAG_INTEGRATED by specified step and,after integration,
 it calls DdsComputeStatic(p) internally and increment the time by specified step.<p/>
 
-
-It is noted that the DDSL can compute <b>the steady state</b> directly by re-arranging the relations
-(by calling <b>DdsCompileGraph(p, DDS_STEADY_STATE)</b>).<p/>
+<b>Note:</b> DDSL can compute <a href="#INTEGRATED">the steady state</a> by calling <a href="#DdsCompileGraph">DdsCompileGraph(p, DDS_STEADY_STATE)</a>.<br/>
 <b>Note:</b> More explanation will be given in detail hearinafter.<p/>
 
 
 <h3>What the user must do:</h3>
 As described so far,the user must invoke:
 <ol>
-<li><b>DdsCreateProcessor()</b>...create a processor</li>
-<li><b>DdsAddVariableV()</b><br/>
-<b>DdsAddVariableA()</b>...create a variable and register it to the processor.
-    The user also sets the (initial) value of y,the right hand side variables,and the function to compute the value of y. The user also sets <a href="#FLAG">FLAGS</a>(attributes) of y that determins the computation order.</li>
-<li><b>DdsCompileGraph()</b>... checks relations of each variable and determines computation order.</li>
-<li><b>DdsComputeStatic()</b> or<br/> 
-<b>DdsComputeDynamic()</b>... compute variable's value by solving non-linear equations or ordinary differential equations,according to the computation order determined by DdsCompileGraph().</li>
-<li><b>DdsDeleteProcessor()</b>... frees every memories allocated by the processor.</li>
+<li><a href="#DdsCreateProcessor">DdsCreateProcessor()</a>...create a processor</li>
+<li><a href="#DdsAddVariableV">DdsAddVariableV()</a><br/>
+<a href="#DdsAddVariableA">DdsAddVariableA()</a>...create a variable and register it to the processor.
+    The user also sets the (initial) value of y,the right hand side variables,and the function to compute the value of y. The user also sets user <a href="#FLAG">FLAG</a>s(attributes) of y that determin the computation order.</li>
+<li><a href="#DdsCompileGraph">DdsCompileGraph()</a>... checks relations of each variable and determines computation order.</li>
+<li><a href="#DdsComputeStatic">DdsComputeStatic()</a> or<br/> 
+<a href="#DdsComputeDynamic">DdsComputeDynamic()</a>... compute variable's value by solving non-linear equations or ordinary differential equations,according to the computation order determined by DdsCompileGraph().</li>
+<li><a href="#DdsDeleteProcessor">DdsDeleteProcessor()</a>... frees every memories allocated by the processor.</li>
 </ol>
 
 <h3>What DDSL can do:</h3>
 DDSL can:
 <ol>
-<li>remove variables having no contribution directly or indirectly for computing variables of DDS_FLAG_REQUIRED from any computation.</li>
+<li>remove variables having <b>no contribution</b> directly or indirectly for computing variables of <a href="#REQUIRED">DDS_FLAG_REQUIRED</a> from any computation.</li>
+<li>automatically detect <a href="#DIVISIBLE">loop</a> such as y=f(y),and rearrange it to the equation system as y1 = f(y2), y1-y2 =&gt;0.</li> 
+<li>automatically construct <a href="#TRIANGULAR">non-linear eqution sysytems</a> and solve them.</li>
 <li>construct computation order of each variable.</li>
-<li>automatically detect loop such as y=f(y),and rearrange it to the equation system as y1 = f(y2), y1-y2 =&gt;0.</li> 
-<li>automatically construct non-linear eqution sysytems and solve them.</li>
-<li>solve ordinally differential equations if given.</li>
-<li>obtain steady state by changing ordinally differential equations to algebraic equation systems and solve them.</li>
+<li>solve <a href="#INTEGRATED">ordinally differential equations</a> if given.</li>
+<li>obtain <a href="#INTEGRATED">steady state</a> by changing ordinally differential equations to algebraic equation systems and solve them.</li>
 </ol>
 How DDSL realizes these will be hereinafter described.
 
@@ -268,41 +272,38 @@ or
 <b>Downstream</b>:  In case like <b>x = f(y)</b>. Variable x is <b>downstream</b> variables y.
 </blockquote>
 <h3>User flags:</h3>
-<a href="#REQUIRED">DDS_FLAG_REQUIRED</a> <a href="#SET">DDS_FLAG_SET</a> <a href="#TARGETED">DDS_FLAG_TARGETED <a href="#INTEGRATED">DDS_FLAG_INTEGRATED</a> <a href="#VOLATILE">DDS_FLAG_VOLATILE</a> <a href="#DIVISIBLE">DDS_FLAG_DIVISIBLE</a> <a href="#NON_DIVISIBLE">DDS_FLAG_NON_DIVISIBLE</a>
-<br/>
+<table width="100%"><tr><td align="center">
+<a href="#REQUIRED">DDS_FLAG_REQUIRED</a> <a href="#SET">DDS_FLAG_SET</a> <a href="#TARGETED">DDS_FLAG_TARGETED</a> <a href="#INTEGRATED">DDS_FLAG_INTEGRATED</a> <a href="#VOLATILE">DDS_FLAG_VOLATILE</a> <a href="#DIVISIBLE">DDS_FLAG_DIVISIBLE</a> <a href="#NON_DIVISIBLE">DDS_FLAG_NON_DIVISIBLE</a>
+</td></tr></table>
 <b>Note:</b> All user flags use lower 12-bit of unsigned int,thus,upper 24-bit can be freely used by the user.
 <p/>
 <a name="REQUIRED"/>
 <table border="1" width="100%">
-<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
-<tr><th>User flag name</th><th>value</th><th>denoted:</th>
-<tr><td><b>DDS_FLAG_REQUIRED</b></td><td>0x00000001</td><td><b>&lt;R&gt;</b></td></tr>
+<col width="75%">
+<tr><th align="left">User flag name (notation)</th><th align="left">value</th>
+<tr><td><b>DDS_FLAG_REQUIRED (&lt;R&gt;)</b></td><td>0x00000001</td></tr>
 </table>
-<blockquote>
 The user must set this flag to any variable of which value is wanted.<br/>
 <b>If there is no variable of &lt;R&gt; flag,then nothing is computed.</b>
-</blockquote>
-
+<p/>
 <a name="SET"/>
 <table border="1" width="100%">
-<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
-<tr><td><b>DDS_FLAG_SET</b></td><td>0x00000002</td><td><b>&lt;S&gt;</b></td></tr></table>
-
+<col width="75%">
+<tr><td><b>DDS_FLAG_SET (&lt;S&gt;)</b></td><td>0x00000002</td></tr></table>
 <table width="100%" border="1">
 <tr><td><img src="./s.png"></td><td align="left">
 &lt;S&gt; is a constant specification.<br/>
 Any variable having this flag is never computed even RHSVs and the function to compute its value are defined.<br/>This specification may cause to divide one connected component into more than one.
 </td></tr>
 </table>
-<b>Note:</b><blockquote>
-<b>Connected component</b> is a group of variables that are connected directly or indirectly connected each other.</blockquote>
+<b>Note:</b><b>Connected component</b> is a group of variables that are connected directly or indirectly each other.
+<p/>
 
 <a name="TARGETED"/>
 <table border="1" width="100%">
-<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
-<tr><td><b>DDS_FLAG_TARGETED</b></td><td>0x00000004</td><td><b>&lt;T&gt;</b></td></tr>
+<col width="75%">
+<tr><td><b>DDS_FLAG_TARGETED (&lt;T&gt;)</b></td><td>0x00000004</td></tr>
 </table>
-
 <table width="100%" border="1">
 <col width="25%"><col width="60%">
 <tr><td><img src="./t.png"></td><td align="left">
@@ -322,44 +323,44 @@ This specification may cause to divide one connected component into more than on
 </td><td>
 <img src="./ft_route.png"><br/>
 This looks to be 2-dimensional equation system because there are two <a href="#FREE">&lt;F&gt;</a>s and two &lt;T&gt;s. 
-But,the independent 2 routes from each <a href="#FREE">&lt;F&gt;</a> to &lt;T&gt; can not be found,which means the equation system can not be solved.
+But,the independent 2 routes from each <a href="#FREE">&lt;F&gt;</a> to &lt;T&gt; can not be found that means the equation system can not be solved which is detected before actual computations.
 </td></tr>
 </table>
-
+<p/>
 <a name="DIVISIBLE"/>
 <table border="1" width="100%">
-<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
-<tr><td><b>DDS_FLAG_DIVISIBLE</b></td><td>0x00000020</td><td><b><a href="#DIVIDED">&lt;D&gt;</a></b></td></tr></table>
+<col width="75%">
+<tr><td><b>DDS_FLAG_DIVISIBLE (&lt;D&gt;)</b></td><td>0x00000020</td></tr></table>
 <table width="100%" border="1">
 <tr><td><img src="./loop.png"></td><td align="left">
 Any variable(say y) computed by itself like y = f(y) constructs a loop. 
-It is necessary to divide y to compute value of the variables on the loop.
-If y is divided into y1(=<a href="#FREE">&lt;F&gt;</a>) and y2(=&lt;T&gt;),then a new equation <br/>
+It is necessary to divide y ( y ==&gt; y1 , y2 ) to compute value of the variables on the loop.
+If y is divided into y1(=<a href="#FREE">&lt;F&gt;</a>) and y2(=<a href="#TARGETED">&lt;T&gt;</a>),then a new equation <br/>
   y2 = y1 - f(y1)<br/>
   y2==&gt;0.0<br>
-will be added and be solved.<p/>
+will be added and be solved.<br/>
+y1 is &lt;F&gt; and y2 is &lt;T&gt;.also both y1 and y2 are <a href="#DIVIDED">&lt;DD&gt;</a> at the same time.<p/>
 DDSL automatically detects loops and performs above procedures.<br/>
-Any variable on a loop can be divided. The user can specify this <a href="#DIVIDED">&lt;D&gt;</a>(DDS_FLAG_DIVISIBLE) flag on any variable(by reason of easy estimation of initial value, etc.) to be divided. DDSL tries to divide <a href="#DIVIDED">&lt;D&gt;</a> varable,but it is not alway divided.
+Any variable on a loop can be divided. The user can specify this &lt;D&gt;(DDS_FLAG_DIVISIBLE) flag on any variable(by reason of easy estimation of initial value, etc.) to be divided. DDSL tries to divide &lt;D&gt; varable,but it is not alway divided.
 DDSL finds loops and tries to divide the variable which is located on more loops.
-The variable actually divided will have the system flag DDS_SFLAG_DIVIDED(&lt;DD&gt;).<p/>
-<b>Note:</b> <a href="#DIVIDED">&lt;D&gt;</a> variable is not alway divided.<br/>
-<b>Note:</b> The y1 is the same as y,and newly created variable y2's name is the same name of y+'+'.
-
+The variable actually divided will have the system flag <a href="#DIVIDED">DDS_SFLAG_DIVIDED(&lt;DD&gt;)</a>.<p/>
+<b>Note:</b> &lt;D&gt; variable is not alway divided.<br/>
+<b>Note:</b> The y1 is the same as y,and newly created variable y2 has the name of y+'+'.
 </td></tr>
 </table>
-
+<p/>
 <a name="NON_DIVISIBLE"/>
 <table border="1" width="100%">
-<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
-<tr><td><b>DDS_FLAG_NON_DIVISIBLE</b></td><td>0x00000040</td><td><b>&lt;N&gt;</b></td></tr>
+<col width="75%">
+<tr><td><b>DDS_FLAG_NON_DIVISIBLE (&lt;N&gt;)</b></td><td>0x00000040</td></tr>
 </table>
 This flag is set on the variable which the user do not want to be divided.
 DDSL tries not to divide the variable of this flag,but it is not alway true due to <a href="#DIVISIBLE">above reason</a>.<p/>
 
 <a name="INTEGRATED"/>
 <table border="1" width="100%">
-<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
-<tr><td><b>DDS_FLAG_INTEGRATED</b></td><td>0x00000008</td><td><b>&lt;I&gt;</b></td></tr></table>
+<col width="75%">
+<tr><td><b>DDS_FLAG_INTEGRATED (&lt;I&gt;)</b></td><td>0x00000008</td></tr></table>
 Integration specification. &lt;I&gt; variable's value is computed by integration. &lt;I&gt; must have only 1 RHSV which is the derivative(<a href="#DERIVATIVE">&lt;DR&gt;</a>)of the ordinary differential equation. The function pointer to compute(integrate) the value of &lt;I&gt; is not necessary because integration methods such as Euler,Backward Euler,and Runge-Kutta methods are built in.
 <p/>
 <b>Steady state computation:</b>
@@ -370,13 +371,14 @@ DDSL can algebraicaly compute the steady state as:
 <li>Change &lt;DR&gt variables to &lt;T&gt of value 0.0(steady state condition).</li>
 <li>Solve non-linear equation systems to find the value of &lt;I&gts that make all value of <a href="#DERIVATIVE">&lt;DR&gt;</a>s be zero(steady state).</li>
 </ol>
+See: <a href="#DdsCompileGraph">DdsCompileGraph(p,DDS_STEADY_STATE)</a>
 </blockquote>
 <a name="VOLATILE"/>
 <table border="1" width="100%">
-<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
-<tr><td><b>DDS_FLAG_VOLATILE</b></td><td>0x00000010</td><td><b>&lt;V&gt;</b></td></tr></table>
-&lt;V&gt; flag can only be set on &lt;S&gt; or &lt;T&gt; variables.<br/>
-&lt;V&gt; flag means that the value of &lt;V&gt; is outside of control by DDSL(&lt;V&gt; treated as &lt;S&gt; or &lt;T&gt;,but it's value is undefined).<br/>
+<col width="75%">
+<tr><td><b>DDS_FLAG_VOLATILE (&lt;V&gt;)</b></td><td>0x00000010</td></tr></table>
+&lt;V&gt; flag can only be set on the variable of &lt;S&gt; or &lt;T&gt;.<br/>
+&lt;V&gt; flag means that the value of &lt;V&gt; is outside the control of DDSL(&lt;V&gt; treated as &lt;S&gt; or &lt;T&gt;,but it's value is undefined).<br/>
 &lt;V&gt; variables are regarded as time-dependent variables.
 
 <a name="TRIANGULAR" />
@@ -387,107 +389,253 @@ DDSL can algebraicaly compute the steady state as:
 <img src="./block.png">
 </td><td>
 Newton method creates Jacobian matrix when it solves non-linear equation system (y=f(x) ==&gt;0.0),<blockquote>
-y(x+dx) = y(x)+J*dx ==&gt; 0.0 , where J is a Jacobian matrix(=dy/dx) <br/>
-then dx = -J<sup>-1</sup>*y(x), where x+dx is the next estimation.
+y(x+dx) = y(x)+J*dx ==&gt; 0.0 ,  <br/>
+then dx = -J<sup>-1</sup>*y(x),
 </blockquote>
-y,x,and dx are vectors.<br/>
-Computation of J<sup>-1</sup> may be time-consuming if J is quite large.<br/>
+where J is a Jacobian matrix(=dy/dx), y,x,and dx are vectors,and x+dx is the next estimation.<br/>
+Computation of J or J<sup>-1</sup> may be time-consuming if J is quite large.<br/>
 DDSL divides,if possible,J into a sequence of small-sized matrices as shown in the left image which is called as <b>Block Triangular Decomposition</b>.<br/>
-In the left image,instead of solving big J,smaller sized matrices (1),(2),and (3) are solved in this order by re-arranging columns and rows,
+In the left image,instead of solving big J,smaller sized matrices (1),(2),and (3) are solved in this order by re-arranging columns and rows,<br>
+DDSL adopts numerical differentiation,so that the user need not to prepaire any equations to compute the Jacobian-matrix(dy/dx).<br/>
 </td></tr>
 </table>
 
 <h3>Systems flags:</h3>
-As descrived before,DDSL copies user flags to system flag area after checking,and adds or changes them during the processing(DDSL never touch user flag area which is unsigned int).Typical system flags are listed and descived here.<p/>
+<table width="100%"><tr><td align="center">
+<a href="#ALIVE">DDS_SFLAG_ALIVE</a> <a href="#FREE">DDS_SFLAG_FREE</a> <a href="#DIVIDED">DDS_SFLAG_DIVIDED</a> <a href="#DERIVATIVE">DDS_SFLAG_DERIVATIVE</a> <a href="#ERROR">DDS_SFLAG_ERROR</a> <a href="#ONCE">DDS_COMPUTED_ONCE</a> <a href="#EVERY_TIME">DDS_COMPUTED_EVERY_TIME</a> <a href="#ANY_TIME">DDS_COMPUTED_ANY_TIME</a>
+</td></tr></table>
+<p/>
+As descrived before,DDSL copies user flags to system flag area after checking,and adds or changes them during the processing(DDSL never touch user flag area which is unsigned int).Typical system flags are listed and described here.<p/>
 <a name="ALIVE"/>
 <table border="1" width="100%">
-<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
-<tr><th>System flag name</th><th>value</th><th>denoted:</th>
-<tr><td><b>DDS_SFLAG_ALIVE</b></td><td>0x00001000</td><td><b>&lt;AL&gt;</b></td></tr></table>
-
+<col width="75%">
+<tr><th align="left">System flag name (notation)</th><th align="left">value</th>
+<tr><td><b>DDS_SFLAG_ALIVE (&lt;AL&gt;)</b></td><td>0x00001000</td></tr></table>
+Any variable which has,directly or indirectly,any contribution to compute &lt;R&gt; variables will be &lt;AL&gt;(variable aliving).<br/>
+On the other hand,variables not &lt;AL&gt; will be removed from any computation.
+<p/>
 <a name="FREE"/>
 <table border="1" width="100%">
-<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
-<tr><td><b>DDS_SFLAG_FREE</b></td><td>0x00002000</td><td><b>&lt;FR&gt;</b></td></tr></table>
-
+<col width="75%">
+<tr><td><b>DDS_SFLAG_FREE (&lt;F&gt;)</b></td><td>0x00002000</td></tr></table>
+DDSL finds and sets &lt;F&gt;flag on the variable which has no RHSV and not &lt;S&gt;.<br/>
+&lt;F&gt; variables will be independent(because it can freely change it's value) variables of non-linear eqution systems.<br/>
+Corresponding dependent variables are <a href="#TARGETED">&lt;T&gt;s</a>(that must have &lt;F&gt;s on their upstream).<p/>
+<b>Note:</b> Total number of &lt;F&gt;s and &lt;T&gt;s must be equal in the same connected component.<br/>
+<b>Note:</b> Independent route from each &lt;F&gt; to &lt;T&gt; must exist.
+<p/>
 <a name="DIVIDED"/>
 <table border="1" width="100%">
-<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
-<tr><td><b>DDS_SFLAG_DIVIDED</b></td><td>0x00004000</td><td><b>&lt;DD&gt;</b></td></tr></table>
-
+<col width="75%">
+<tr><td><b>DDS_SFLAG_DIVIDED (&lt;DD&gt;)</b></td><td>0x00004000</td></tr></table>
+<a href="#DIVISIBLE">DDSL detects a loop and divide a variable on the loop</a>. <br/>
+Dividing a variable means that one more variable is created(and registered to the processor).<br/>
+The variable before divided is changed to &lt;F&gt;(and is &lt;DD&gt; at the same time),and the newly
+created variable is &lt;T&gt;(and also is &lt;DD&gt; at the same time).
+<p/>
 <a name="DERIVATIVE"/>
 <table border="1" width="100%">
-<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
-<tr><td><b>DDS_SFLAG_DERIVATIVE</b></td><td>0x00008000</td><td><b>&lt;DR&gt;</b></td></tr></table>
-
+<col width="75%">
+<tr><td><b>DDS_SFLAG_DERIVATIVE (&lt;DR&gt;)</b></td><td>0x00008000</td></tr></table>
+&lt;DR&gt; is the RHSV of &lt;I&gt; and is the derivative of the &lt;I&gt;.
+<p/>
 <a name="ERROR"/>
 <table border="1" width="100%">
-<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
-<tr><td><b>DDS_SFLAG_ERROR</b></td><td>0x00010000</td><td><b>&lt;ER&gt;</b></td></tr></table>
-
+<col width="75%">
+<tr><td><b>DDS_SFLAG_ERROR (&lt;ER&gt;)</b></td><td>0x00010000</td></tr></table>
+When combination of user flags have any error,then this flag will be set to the system flag.
+<p/> 
 <a name="ONCE"/>
 <table border="1" width="100%">
-<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
-<tr><td><b>DDS_COMPUTED_ONCE</b></td><td>0x00020000</td><td><b>&lt;1T&gt;</b></td></tr></table>
-
+<col width="75%">
+<tr><td><b>DDS_COMPUTED_ONCE (&lt;1T&gt;)</b></td><td>0x00020000</td></tr></table>
+Any variable which is computed only by non-volatile &lt;S&gt; or non-volatile &lt;T&gt; directly or indirectly.
+Once &lt;1T&gt; is computed then it's value is unchanged.
+<br/><b>Note:</b> <a href="#DdsGetVariableSequence">See DdsGetVariableSequence()</a><p/>
 <a name="EVERY_TIME"/>
 <table border="1" width="100%">
-<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
-<tr><td><b>DDS_COMPUTED_EVERY_TIME</b></td><td>0x00040000</td><td><b>&lt;ET&gt;</b></td></tr></table>
-
+<col width="75%">
+<tr><td><b>DDS_COMPUTED_EVERY_TIME (&lt;ET&gt;)</b></td><td>0x00040000</td></tr></table>
+&lt;ET&gt; variable is computed at every integration step. &lt;ET&gt; variable is also on the route from &lt;I&gt; to &lt;DR&gt;.
+<br/><b>Note:</b> <a href="#DdsGetVariableSequence">See DdsGetVariableSequence()</a><p/>
 <a name="ANY_TIME"/>
 <table border="1" width="100%">
-<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
-<tr><td><b>DDS_COMPUTED_ANY_TIME</b></td><td>0x00080000</td><td><b>&lt;AT&gt;</b></td></tr></table>
-
+<col width="75%">
+<tr><td><b>DDS_COMPUTED_ANY_TIME (&lt;AT&gt;)</b></td><td>0x00080000</td></tr></table>
+&lt;AT&gt; variable is time dependent but is not necessary to be computed at every integration step.
+If the user wants to know the value of &lt;AT&gt; variable,user must call <a href="#DdsComputeStatic">DdsComputeStatic()</a> after <a href="#DdsComputeDynamic">DdsComputeDynamic()</a>.
+<br/><b>Note:</b> <a href="#DdsGetVariableSequence">See DdsGetVariableSequence()</a><p/>
 
 <h2>API references</h2>
+
+<a href="#DdsCreateProcessor">DdsCreateProcessor</a>
+<a href="#DdsDeleteProcessor">DdsDeleteProcessor</a>
+<a href="#DdsAddVariableV">DdsAddVariableV</a>
+<a href="#DdsAddVariableA">DdsAddVariableA</a>
+<a href="#DdsCompileGraph">DdsCompileGraph</a>
+<a href="#DdsComputeStatic">DdsComputeStatic</a>
+<a href="#DdsComputeDynamic">DdsComputeDynamic</a>
+<a href="#DdsGetVariableSequence">DdsGetVariableSequence</a>
+<a href="#DdsTime">DdsTime</a>
+<a href="#DdsStep">DdsStep</a>
+<a href="#DdsGetEPS">DdsGetEPS</a>
+<a href="#DdsSetEPS">DdsSetEPS</a>
+<a href="#DdsGetMaxIterations">DdsGetMaxIterations</a>
+<a href="#DdsSetMaxIterations">DdsSetMaxIterations</a>
+<a href="#DdsGetProcessorUserPTR">DdsGetProcessorUserPTR</a>
+<a href="#DdsSetProcessorUserPTR">DdsSetProcessorUserPTR</a>
+<a href="#DdsGetVariables">DdsGetVariables</a>
+<a href="#DdsGetVariableUserPTR">DdsGetVariableUserPTR</a>
+<a href="#DdsSetVariableUserPTR">DdsSetVariableUserPTR</a>
+<a href="#DdsGetValue">DdsGetValue</a>
+<a href="#DdsSetValue">DdsSetValue</a>
+<a href="#DdsRhsvs">DdsRhsvs</a>
+<a href="#DdsSetRHSV">DdsSetRHSV</a>
+<a href="#DdsGetRHSV">DdsGetRHSV</a>
+<a href="#DdsCheckVariable">DdsCheckVariable</a>
+<a href="#DdsGetVariableNext">DdsGetVariableNext</a>
+<a href="#DdsGetVariableIndex">DdsGetVariableIndex</a>
+<a href="#DdsGetVariableScore">DdsGetVariableScore</a>
+<a href="#DdsGetUserFlag">DdsGetUserFlag</a>
+<a href="#DdsSetUserFlag">DdsSetUserFlag</a>
+<a href="#DdsGetSystemFlag">DdsGetSystemFlag</a>
+<a href="#DdsSetUserFlagOn"> DdsSetUserFlagOn</a>
+<a href="#DdsSetUserFlagOff">DdsSetUserFlagOff</a>
+<a href="#DdsDbgPrintF">DdsDbgPrintF</a>
+<a href="#DdsSieveVariable">DdsSieveVariable</a>
+<a href="#DdsDivideLoop">DdsDivideLoop</a>
+<a href="#DdsCheckRouteFT">DdsCheckRouteFT</a>
+<a href="#DdsBuildSequence">DdsBuildSequence</a>
+
+
+
+<p/>
 <a name="DdsCreateProcessor"/>
 <table width="100%" border="1">
 <col width="10%">
 <tr><th>Return value</th><th>Function name(arguments...)</th></tr>
 <tr><td>int</td><td>DdsCreateProcessor(DDS_PROCESSOR* p, int nv)</td></tr>
 </table>
+DdsCreateProcessor() allocates memories of DDS_PROCESSOR (struct defined ddsl.h) and sets it's pointer to the first argument <b>p</b>.<br/>
+The second argument <b>nv</b> is the number of variables the processor <b>p</b> can keep which will be extended automaticaly if more than <b>nv</b> variables are to be added.<br/>
+<b>Note:</b> This function returns 0 if it normally finishes,otherwise it returns non-zero error value(see error code listed in ddsl.h).
+<p/>
 
 <a name="DdsDeleteProcessor"/>
 <table width="100%" border="1">
 <col width="10%">
 <tr><td>void</td><td>DdsDeleteProcessor(DDS_PROCESSOR* p)</td></tr>
 </table>
-
+DdsDeleteProcessor() frees all memories the processor <b>p</b> allocated. <br/>
+And sets <b>p</b> be NULL.<br/>
+<p/>
 <a name="DdsAddVariableV"/>
 <table width="100%" border="1">
 <col width="10%">
 <tr><td>int</td><td>DdsAddVariableV(DDS_PROCESSOR p,DDS_VARIABLE *pv,const char *name,unsigned int f,double val, ComputeVal func,int nr,...)</td></tr>
 </table>
+DdsAddVariableV() allocates memories of DDS_VARIABLE (struct defined in ddsl.h) and sets it's pointer to <b>pv</b>.<br/>
+And register newly created variable to the processor <b>p</b>.
+[Arguments]
+<ul>
+<li> p  ... DDS_PROCESSOR created by <a href="#DdsCreateProcessor">DdsCreateProcessor()</a> beforehand.</li>
+<li> pv ... Pointer to DDS_VARIABLE which is set if the memories are normaly allocated.</li>
+<li> name ... Character string of the name of the newly allocated variable pv.</li>
+<li> f ... <a href="#FLAG">User flags</a> set to pv.</li>
+<li> val ... (Initial) value of the variable pv.</li>
+<li> func ... Function pointer to compute the value of the variable pv(about ComputeVal,see ddsl.h)</li>
+<li> nr,... nr is the number of RHSVs of the variable pv. After nr,nr RHSVs follow. ... means the variable argument list of RHSVs.</li>
+</ul>
+<b>Note:</b> The last n RHSVs of pv's can be anything(can be NULL) at this moment. DDSL allocates the memories for them and just stores them(<a href="#RHSV">see</a>).
+<br/>
+<b>Note:</b> This function returns 0 if it normally finishes,otherwise it returns non-zero error value(see error code listed in ddsl.h).
+<p/>
 
+<p/>
 <a name="DdsAddVariableA"/>
 <table width="100%" border="1">
 <col width="10%">
 <tr><td>int</td><td>DdsAddVariableA(DDS_PROCESSOR p, DDS_VARIABLE* pv, const char* name, unsigned int f, double val, ComputeVal func, int nr, DDS_VARIABLE** rhsvs)</td></tr>
 </table>
+DdsAddVariableA() is almost the same as <a href="#DdsAddVariableV">DdsAddVariableV()</a> above except for the last argument.<br/>
+The last argument of DdsAddVariableA() is an array of RHSVs of size nr.
+<br/>
+<b>Note:</b> This function returns 0 if it normally finishes,otherwise it returns non-zero error value(see error code listed in ddsl.h).
+<p/>
+
+<a name="DdsCompileGraph"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>int</td><td>DdsCompileGraph(DDS_PROCESSOR p,int method)</td></tr>
+</table>
+DdsCompileGraph() calls following functions in this order and build up everything necessary before computation.
+<ol>
+<li><a href="#DdsSieveVariable">DdsSieveVariable(p)</a>... copies correct user flags to system flag,and selects <a href="#ALIVE">&lt;AL&gt;</a> variables.</a></li>
+<li><a href="#DdsDivideLoop">DdsDivideLoop(p)</a>... detects loops and divide them into <a href="#DIVISIBLE">&lt;DD&gt;</a>. </a></li>
+<li><a href="#DdsCheckRouteFT">DdsCheckRouteFT(p)</a>...checks <a href="#TARGETED">1 to 1 correspondense between &lt;F&gt;s and &lt;T&gt;s</a>,and performs <a href="#TRIANGULAR">block triangular decomposition</a>.</li>
+<li><a href="#DdsBuildSequence">DdsBuildSequence(p)</a>... constructs conputation order.</li>
+</ol>
+The method must be 0(default:DDS_I_RUNGE_KUTTA) or the one listed bellow:
+<ul>
+<li>DDS_I_EULER or DDS_I_RUNGE_KUTTA  ... Euler or Runge-Kutta method for integration(DdsComputeDynamic(p) must be called next).</li>
+<li>DDS_I_BW_EULER  ... Backward Euler method for integration(DdsComputeDynamic(p) must be called next).</li>
+<li>DDS_STEADY_STATE ... Steady state computation(DdsComputeStatic(p) should be called next).
+</ul>
+The computation order changes according to integration methods or steady state computation.
+<p/>
+<b>Note:</b> This function returns 0 if it normally finishes,otherwise it returns non-zero error value(see error code listed in ddsl.h).
+<p/>
+
+<a name="DdsComputeStatic"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>int</td><td>DdsComputeStatic(DDS_PROCESSOR p)</td></tr>
+</table>
+<br/>
+<b>Note:</b> This function returns 0 if it normally finishes,otherwise it returns non-zero error value(see error code listed in ddsl.h).
+<p/>
+
+<a name="DdsComputeDynamic"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>int</td><td>DdsComputeDynamic(DDS_PROCESSOR p,int method)</td></tr>
+</table>
+<br/>
+<b>Note:</b> This function returns 0 if it normally finishes,otherwise it returns non-zero error value(see error code listed in ddsl.h).
+<p/>
+
+<a name="DdsGetUserFlag"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>unsigned int</td><td>DdsGetUserFlag(DDS_VARIABLE v)</td></tr>
+</table>
+<a name="DdsSetUserFlag"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>unsigned int</td><td>DdsSetUserFlag(DDS_VARIABLE v)</td></tr>
+</table>
+
+<a name="DdsGetSystemFlag"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>unsigned int</td><td>DdsGetSystemFlag(DDS_VARIABLE v)</td></tr>
+</table>
 
 <a name="DdsSetUserFlagOn"/>
 <table width="100%" border="1">
 <col width="10%">
-<tr><td>unsigned int</td><td>DdsSetUserFlagOn(DDS_VARIABLE hv, unsigned int f)</td></tr>
+<tr><td>unsigned int</td><td>DdsSetUserFlagOn(DDS_VARIABLE v, unsigned int f)</td></tr>
 </table>
 
 <a name="DdsSetUserFlagOff"/>
 <table width="100%" border="1">
 <col width="10%">
-<tr><td>unsigned int</td><td>DdsSetUserFlagOff(DDS_VARIABLE hv, unsigned int f)</td></tr></table>
+<tr><td>unsigned int</td><td>DdsSetUserFlagOff(DDS_VARIABLE v, unsigned int f)</td></tr></table>
 
-<a name="DdsGetSystemFlag"/>
+<a name="DdsGetVariables"/>
 <table width="100%" border="1">
 <col width="10%">
-<tr><td>unsigned int</td><td>DdsGetSystemFlag(DDS_VARIABLE hv)</td></tr>
-</table>
-
-<a name="DdsVariables"/>
-<table width="100%" border="1">
-<col width="10%">
-<tr><td>DDS_VARIABLE*</td><td>DdsVariables(int* nv, DDS_PROCESSOR p)</td></tr>
+<tr><td>DDS_VARIABLE*</td><td>DdsGetVariables(int* nv, DDS_PROCESSOR p)</td></tr>
 </table>
 
 <a name="DdsGetVariableUserPTR"/>
@@ -532,24 +680,6 @@ As descrived before,DDSL copies user flags to system flag area after checking,an
 <tr><td>DDS_VARIABLE</td><td>DdsGetRHSV(DDS_VARIABLE hv, int i)</td></tr>
 </table>
 
-<a name="DdsCompileGraph"/>
-<table width="100%" border="1">
-<col width="10%">
-<tr><td>int</td><td>DdsCompileGraph(DDS_PROCESSOR p,int method)</td></tr>
-</table>
-
-<a name="DdsComputeStatic"/>
-<table width="100%" border="1">
-<col width="10%">
-<tr><td>int</td><td>DdsComputeStatic(DDS_PROCESSOR ph)</td></tr>
-</table>
-
-<a name="DdsComputeDynamic"/>
-<table width="100%" border="1">
-<col width="10%">
-<tr><td>int</td><td>DdsComputeDynamic(DDS_PROCESSOR ph,int method)</td></tr>
-</table>
-
 <a name="DdsGetVariableSequence"/>
 <table width="100%" border="1">
 <col width="10%">
@@ -559,73 +689,73 @@ As descrived before,DDSL copies user flags to system flag area after checking,an
 <a name="DdsTime"/>
 <table width="100%" border="1">
 <col width="10%">
-<tr><td>DDS_VARIABLE</td><td>DdsTime(DDS_PROCESSOR ph)</td></tr>
+<tr><td>DDS_VARIABLE</td><td>DdsTime(DDS_PROCESSOR p)</td></tr>
 </table>
 
 <a name="DdsStep"/>
 <table width="100%" border="1">
 <col width="10%">
-<tr><td>DDS_VARIABLE</td><td>DdsStep(DDS_PROCESSOR ph)</td></tr>
+<tr><td>DDS_VARIABLE</td><td>DdsStep(DDS_PROCESSOR p)</td></tr>
 </table>
 
 <a name="DdsGetEPS"/>
 <table width="100%" border="1">
 <col width="10%">
-<tr><td>double</td><td>DdsGetEPS(DDS_PROCESSOR ph)</td></tr>
+<tr><td>double</td><td>DdsGetEPS(DDS_PROCESSOR p)</td></tr>
 </table>
 
 <a name="DdsSetEPS"/>
 <table width="100%" border="1">
 <col width="10%">
-<tr><td>double</td><td>DdsSetEPS(DDS_PROCESSOR ph, double eps)</td></tr>
+<tr><td>double</td><td>DdsSetEPS(DDS_PROCESSOR p, double eps)</td></tr>
 </table>
 
 <a name="DdsGetMaxIterations"/>
 <table width="100%" border="1">
 <col width="10%">
-<tr><td>int</td><td>DdsGetMaxIterations(DDS_PROCESSOR ph)</td></tr>
+<tr><td>int</td><td>DdsGetMaxIterations(DDS_PROCESSOR p)</td></tr>
 </table>
 
 <a name="DdsSetMaxIterations"/>
 <table width="100%" border="1">
 <col width="10%">
-<tr><td>int</td><td>DdsSetMaxIterations(DDS_PROCESSOR ph, int max)</td></tr>
+<tr><td>int</td><td>DdsSetMaxIterations(DDS_PROCESSOR p, int max)</td></tr>
 </table>
 
 <a name="DdsGetProcessorUserPTR"/>
 <table width="100%" border="1">
 <col width="10%">
-<tr><td>void*</td><td>DdsGetProcessorUserPTR(DDS_PROCESSOR ph)</td></tr>
+<tr><td>void*</td><td>DdsGetProcessorUserPTR(DDS_PROCESSOR p)</td></tr>
 </table>
 
 <a name="DdsSetProcessorUserPTR"/>
 <table width="100%" border="1">
 <col width="10%">
-<tr><td>void</td><td>DdsSetProcessorUserPTR(DDS_PROCESSOR ph,void* val)</td></tr>
+<tr><td>void</td><td>DdsSetProcessorUserPTR(DDS_PROCESSOR p,void* val)</td></tr>
 </table>
 
 <a name="DdsCheckVariable"/>
 <table width="100%" border="1">
 <col width="10%">
-<tr><td>int</td><td>DdsCheckVariable(DDS_PROCESSOR ph, DDS_VARIABLE hv)</td></tr>
+<tr><td>int</td><td>DdsCheckVariable(DDS_PROCESSOR p, DDS_VARIABLE hv)</td></tr>
 </table>
 
 <a name="DdsGetVariableNext"/>
 <table width="100%" border="1">
 <col width="10%">
-<tr><td>DDS_VARIABLE</td><td>DdsGetVariableNext(DDS_VARIABLE hv)</td></tr>
+<tr><td>DDS_VARIABLE</td><td>DdsGetVariableNext(DDS_VARIABLE v)</td></tr>
 </table>
 
 <a name="DdsGetVariableIndex"/>
 <table width="100%" border="1">
 <col width="10%">
-<tr><td>int</td><td>DdsGetVariableIndex(DDS_VARIABLE hv)</td></tr>
+<tr><td>int</td><td>DdsGetVariableIndex(DDS_VARIABLE v)</td></tr>
 </table>
 
 <a name="DdsGetVariableScore"/>
 <table width="100%" border="1">
 <col width="10%">
-<tr><td>int</td><td>DdsGetVariableScore(DDS_VARIABLE hv)</td></tr>
+<tr><td>int</td><td>DdsGetVariableScore(DDS_VARIABLE v)</td></tr>
 </table>
 
 <a name="DdsDbgPrintF"/>
@@ -637,25 +767,25 @@ As descrived before,DDSL copies user flags to system flag area after checking,an
 <a name="DdsSieveVariable"/>
 <table width="100%" border="1">
 <col width="10%">
-<tr><td>int</td><td>DdsSieveVariable(DDS_PROCESSOR ph)</td></tr>
+<tr><td>int</td><td>DdsSieveVariable(DDS_PROCESSOR p)</td></tr>
 </table>
 
 <a name="DdsDivideLoop"/>
 <table width="100%" border="1">
 <col width="10%">
-<tr><td>int</td><td>DdsDivideLoop(DDS_PROCESSOR ph)</td></tr>
+<tr><td>int</td><td>DdsDivideLoop(DDS_PROCESSOR p)</td></tr>
 </table>
 
 <a name="DdsCheckRouteFT"/>
 <table width="100%" border="1">
 <col width="10%">
-<tr><td>int</td><td>DdsCheckRouteFT(DDS_PROCESSOR ph)</td></tr>
+<tr><td>int</td><td>DdsCheckRouteFT(DDS_PROCESSOR p)</td></tr>
 </table>
 
 <a name="DdsBuildSequence"/>
 <table width="100%" border="1">
 <col width="10%">
-<tr><td>int</td><td>DdsBuildSequence(DDS_PROCESSOR ph)</td></tr>
+<tr><td>int</td><td>DdsBuildSequence(DDS_PROCESSOR p)</td></tr>
 </table>
 
 <hr/>

@@ -37,18 +37,18 @@ EXPORT(int)  DdsCompileGraph(DDS_PROCESSOR p,int method)
 
 	STAGE() = 0;
 
-	DdsDbgPrintF(stdout, "Before processing:", p);
+	_D(DdsDbgPrintF(stdout, "Before processing:", p));
 	e = DdsSieveVariable(p);
-	DdsDbgPrintF(stdout, "After DdsSieveVariable(p)", p);
+	_D(DdsDbgPrintF(stdout, "After DdsSieveVariable(p)", p));
 	if (e) return e;
 	e = DdsDivideLoop(p);
-	DdsDbgPrintF(stdout, "After DdsDivideLoop(p)", p);
+	_D(DdsDbgPrintF(stdout, "After DdsDivideLoop(p)", p));
 	if (e) return e;
 	e = DdsCheckRouteFT(p);
-	DdsDbgPrintF(stdout, "After DdsCheckRouteFT(p)", p);
+	_D(DdsDbgPrintF(stdout, "After DdsCheckRouteFT(p)", p));
 	if (e) return e;
 	e = DdsBuildSequence(p);
-	DdsDbgPrintF(stdout, "After DdsBuildSequence(p)", p);
+	_D(DdsDbgPrintF(stdout, "After DdsBuildSequence(p)", p));
 	if (e) return e;
 	return e;
 }
@@ -180,9 +180,7 @@ EXPORT(void) DdsDeleteProcessor(DDS_PROCESSOR* ph)
 	// Finally delete processor!
 	MemFree((void**)&(p));
 	*ph = nullptr;
-#ifdef _DEBUG
-	PrintAllocCount("DdsDeleteProcessor()");
-#endif
+	_D(PrintAllocCount("DdsDeleteProcessor()"));
 }
 
 EXPORT(double) DdsGetValue(DDS_VARIABLE v)
@@ -196,7 +194,7 @@ EXPORT(double) DdsSetValue(DDS_VARIABLE v, double val)
 }
 
 
-EXPORT(DDS_VARIABLE*) DdsVariables(int *nv,DDS_PROCESSOR ph)
+EXPORT(DDS_VARIABLE*) DdsGetVariables(int *nv,DDS_PROCESSOR ph)
 {
 	DdsProcessor* p = (DdsProcessor*)ph;
 	*nv = VARIABLE_COUNT();
@@ -321,8 +319,8 @@ EXPORT(void) DdsDbgPrintF(FILE* f, const char* title, DDS_PROCESSOR p)
 		else                                        fprintf(f, "n");
 		if (DDS_FLAG_OR(F, DDS_SFLAG_ALIVE))        fprintf(f, " AL");  /* <AL> */
 		else                                        fprintf(f, " al");
-		if (DDS_FLAG_OR(F, DDS_SFLAG_FREE))         fprintf(f, " FR");  /* <AL> */
-		else                                        fprintf(f, " fr");
+		if (DDS_FLAG_OR(F, DDS_SFLAG_FREE))         fprintf(f, " F");   /* <F> */
+		else                                        fprintf(f, " f");
 		if (DDS_FLAG_OR(F, DDS_SFLAG_DIVIDED))      fprintf(f, " DD");  /* <DD> */
 		else                                        fprintf(f, " dd");
 		if (DDS_FLAG_OR(F, DDS_SFLAG_DERIVATIVE))   fprintf(f, " DR");  /* <DR> */

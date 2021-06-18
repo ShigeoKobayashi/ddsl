@@ -230,7 +230,7 @@ EXPORT(int)           DdsGetMaxIterations(DDS_PROCESSOR ph);
 EXPORT(int)           DdsSetMaxIterations(DDS_PROCESSOR ph, int max);
 EXPORT(void*)         DdsGetProcessorUserPTR(DDS_PROCESSOR ph);
 EXPORT(void)          DdsSetProcessorUserPTR(DDS_PROCESSOR ph,void* val);
-EXPORT(DDS_VARIABLE*) DdsVariables(int* nv, DDS_PROCESSOR p);
+EXPORT(DDS_VARIABLE*) DdsGetVariables(int* nv, DDS_PROCESSOR p);
 
 EXPORT(void*)         DdsGetVariableUserPTR(DDS_VARIABLE v);
 EXPORT(void)          DdsSetVariableUserPTR(DDS_VARIABLE v, void* val);
@@ -244,6 +244,8 @@ EXPORT(DDS_VARIABLE)  DdsGetVariableNext(DDS_VARIABLE hv);
 EXPORT(int)           DdsGetVariableIndex(DDS_VARIABLE hv);
 EXPORT(int)           DdsGetVariableScore(DDS_VARIABLE hv);
 
+EXPORT(unsigned int)  DdsGetUserFlag(DDS_VARIABLE hv);
+EXPORT(unsigned int)  DdsSetUserFlag(DDS_VARIABLE hv);
 EXPORT(unsigned int)  DdsGetSystemFlag(DDS_VARIABLE hv);
 EXPORT(unsigned int)  DdsSetUserFlagOn(DDS_VARIABLE hv, unsigned int f);
 EXPORT(unsigned int)  DdsSetUserFlagOff(DDS_VARIABLE hv, unsigned int f);
