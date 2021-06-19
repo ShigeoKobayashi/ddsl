@@ -160,7 +160,7 @@ typedef DdsVariable*  DDS_VARIABLE;   /* Variable handle  */
 #define DDS_SFLAG_DIVIDED       0x00004000  /* <DD> */
 #define DDS_SFLAG_DERIVATIVE    0x00008000  /* <DR> */
 #define DDS_SFLAG_ERROR         0x00010000  /* <ER> (Variable having some contradicted flags.) */
-#define DDS_COMPUTED_ONCE       0x00020000  /* <1T> (Variable computed once,conputed directly or indirectly by <S>.) */
+#define DDS_COMPUTED_ONCE       0x00020000  /* <1T> (Variable computed once,computed directly or indirectly by <S>.) */
 #define DDS_COMPUTED_EVERY_TIME 0x00040000  /* <ET> (Variable computed at every integration steps,on upstream from <I> to <DE>.) */
 #define DDS_COMPUTED_ANY_TIME   0x00080000  /* <AT> (Variable computed at any time,time dependent but not <E>.) */
 #define DDS_SFLAG_MASK          0x00FFF000  /* Mask */
@@ -236,16 +236,17 @@ EXPORT(void*)         DdsGetVariableUserPTR(DDS_VARIABLE v);
 EXPORT(void)          DdsSetVariableUserPTR(DDS_VARIABLE v, void* val);
 EXPORT(double)        DdsGetValue(DDS_VARIABLE v);
 EXPORT(double)        DdsSetValue(DDS_VARIABLE v,double val);
-EXPORT(DDS_VARIABLE*) DdsRhsvs(int* nr, DDS_VARIABLE v);
+EXPORT(DDS_VARIABLE*) DdsGetRhsvs(int* nr, DDS_VARIABLE v);
 EXPORT(int)           DdsSetRHSV(DDS_VARIABLE hv, int i, DDS_VARIABLE rv);
 EXPORT(DDS_VARIABLE)  DdsGetRHSV(DDS_VARIABLE hv, int i);
 EXPORT(int)           DdsCheckVariable(DDS_PROCESSOR ph, DDS_VARIABLE hv);
+EXPORT(const char *)  DdsGetVariableName(DDS_VARIABLE hv);
 EXPORT(DDS_VARIABLE)  DdsGetVariableNext(DDS_VARIABLE hv);
 EXPORT(int)           DdsGetVariableIndex(DDS_VARIABLE hv);
 EXPORT(int)           DdsGetVariableScore(DDS_VARIABLE hv);
 
 EXPORT(unsigned int)  DdsGetUserFlag(DDS_VARIABLE hv);
-EXPORT(unsigned int)  DdsSetUserFlag(DDS_VARIABLE hv);
+EXPORT(unsigned int)  DdsSetUserFlag(DDS_VARIABLE hv, unsigned int f);
 EXPORT(unsigned int)  DdsGetSystemFlag(DDS_VARIABLE hv);
 EXPORT(unsigned int)  DdsSetUserFlagOn(DDS_VARIABLE hv, unsigned int f);
 EXPORT(unsigned int)  DdsSetUserFlagOff(DDS_VARIABLE hv, unsigned int f);

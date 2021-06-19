@@ -183,6 +183,11 @@ EXPORT(void) DdsDeleteProcessor(DDS_PROCESSOR* ph)
 	_D(PrintAllocCount("DdsDeleteProcessor()"));
 }
 
+EXPORT(const char*)  DdsGetVariableName(DDS_VARIABLE v)
+{
+	return (const char*)NAME(((DdsVariable*)v));
+}
+
 EXPORT(double) DdsGetValue(DDS_VARIABLE v)
 {
 	return VALUE(((DdsVariable*)v));
@@ -201,7 +206,7 @@ EXPORT(DDS_VARIABLE*) DdsGetVariables(int *nv,DDS_PROCESSOR ph)
 	return (DDS_VARIABLE*)VARIABLEs();
 }
 
-EXPORT(DDS_VARIABLE*) DdsRhsvs(int* nr, DDS_VARIABLE v)
+EXPORT(DDS_VARIABLE*) DdsGetRhsvs(int* nr, DDS_VARIABLE v)
 {
 	DdsVariable* p = (DdsVariable*)v;
 	*nr = RHSV_COUNT(p);

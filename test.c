@@ -29,7 +29,7 @@ void Test1()
 	DdsAddVariableV(p, &V[8], "8", 0, 0.0, CompVal, 1, &V[6]);
 	DdsAddVariableV(p, &V[9], "9", 0, 0.0, CompVal, 1, &V[8]);
 	for (i = 0; i < NV; ++i) {
-		pV = DdsRhsvs(&nr, V[i]);
+		pV = DdsGetRhsvs(&nr, V[i]);
 		for (j = 0; j < nr; ++j) {
 			pV[j] = *((DDS_VARIABLE*)pV[j]);
 		}
@@ -65,7 +65,7 @@ void Test1_1()
 	DdsAddVariableV(p, &V[12], "12", 0, 0.0, CompVal, 1, &V[11]);
 
 	for (i = 0; i < NV1; ++i) {
-		pV = DdsRhsvs(&nr, V[i]);
+		pV = DdsGetRhsvs(&nr, V[i]);
 		for (j = 0; j < nr; ++j) {
 			pV[j] = *((DDS_VARIABLE*)pV[j]);
 		}
@@ -212,7 +212,7 @@ void Test2_2()
 	DdsAddVariableV(p, &Y[7], name, DDS_FLAG_TARGETED, 0.0, CompVal, 3, Z[1], Z[2], Z[7]); name[1] += 1;
 
 	DdsAddVariableV(p, &DE, "DE", 0, 0.0, CompVal, 1, W[3]); 
-	pV = DdsRhsvs(&nr, I);
+	pV = DdsGetRhsvs(&nr, I);
 	pV[0] = *((DDS_VARIABLE*)pV[0]);
 
 
@@ -341,9 +341,9 @@ void Test0()
 	DdsAddVariableV(p, &DE2, "DE2", 0, 0.0, CompVal, 1, x3);
 
 
-	pV = DdsRhsvs(&nr, I);
+	pV = DdsGetRhsvs(&nr, I);
 	pV[0] = *((DDS_VARIABLE*)pV[0]);
-	pV = DdsRhsvs(&nr, I2);
+	pV = DdsGetRhsvs(&nr, I2);
 	pV[0] = *((DDS_VARIABLE*)pV[0]);
 
 	DdsCompileGraph(p, DDS_I_EULER);
@@ -364,7 +364,7 @@ double CompVal1(DDS_PROCESSOR p, DDS_VARIABLE v)
 {
 	int nr;
 	DdsVariable* pv = (DdsVariable*)v;
-	DdsVariable** pVs = DdsRhsvs(&nr,pv);
+	DdsVariable** pVs = DdsGetRhsvs(&nr,pv);
 	return 1.0-2.0*DdsGetValue(pVs[0])- DdsGetValue(pVs[1]);
 }
 
@@ -385,7 +385,7 @@ void TestDD()
 
 	pVs = DdsGetVariables(&nv, p);
 	for (i = 0; i < nv; ++i) {
-		pVr = DdsRhsvs(&nr, pVs[i]);
+		pVr = DdsGetRhsvs(&nr, pVs[i]);
 		for (j = 0; j < nr; ++j) {
 			pVr[j] = *((DDS_VARIABLE*)pVr[j]);
 		}
@@ -461,7 +461,7 @@ void TestI()
 	step = DdsStep(p);
 	pVs = DdsGetVariables(&nv, p);
 	for (i = 0; i < nv; ++i) {
-		pVr = DdsRhsvs(&nr, pVs[i]);
+		pVr = DdsGetRhsvs(&nr, pVs[i]);
 		for (j = 0; j < nr; ++j) {
 			pVr[j] = *((DDS_VARIABLE*)pVr[j]);
 		}
@@ -549,7 +549,7 @@ void TestNL()
 
 	pVs = DdsGetVariables(&nv, p);
 	for (i = 0; i < nv; ++i) {
-		pVr = DdsRhsvs(&nr, pVs[i]);
+		pVr = DdsGetRhsvs(&nr, pVs[i]);
 		for (j = 0; j < nr; ++j) {
 			pVr[j] = *((DDS_VARIABLE*)pVr[j]);
 		}
@@ -623,7 +623,7 @@ int main()
 
 	pVs = DdsGetVariables(&nv, p);
 	for (i = 0; i < nv; ++i) {
-		pVr = DdsRhsvs(&nr, pVs[i]);
+		pVr = DdsGetRhsvs(&nr, pVs[i]);
 		for (j = 0; j < nr; ++j) {
 			pVr[j] = *((DDS_VARIABLE*)pVr[j]);
 		}
