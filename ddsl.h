@@ -161,7 +161,7 @@ typedef DdsVariable*  DDS_VARIABLE;   /* Variable handle  */
 #define DDS_SFLAG_DERIVATIVE    0x00008000  /* <DR> */
 #define DDS_SFLAG_ERROR         0x00010000  /* <ER> (Variable having some contradicted flags.) */
 #define DDS_COMPUTED_ONCE       0x00020000  /* <1T> (Variable computed once,computed directly or indirectly by <S>.) */
-#define DDS_COMPUTED_EVERY_TIME 0x00040000  /* <ET> (Variable computed at every integration steps,on upstream from <I> to <DE>.) */
+#define DDS_COMPUTED_EVERY_TIME 0x00040000  /* <ET> (Variable computed at every integration steps,on upstream from <I> to <DR>.) */
 #define DDS_COMPUTED_ANY_TIME   0x00080000  /* <AT> (Variable computed at any time,time dependent but not <E>.) */
 #define DDS_SFLAG_MASK          0x00FFF000  /* Mask */
 

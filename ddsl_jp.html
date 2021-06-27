@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="jp">
 
 <head>
-<title>DDSL: Digital Dynamic Simulation Library for C/C++ (based on Graph Theory)</title>
+<title>DDSL: Digital Dynamic Simulation Library for C/C++,based on Graph Theory</title>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 <meta name="keywords" content="DDSL(Digital Dynamic Simulation Library for C/C++,based on Graph Theory)">
 <meta name="description" content="Digital Dynamic Simulation Library for C/C++">
@@ -24,9 +24,10 @@ h3 {color: #00007f; padding: 0.2em; font-size: 110%;
     border-bottom-width: 0.05em; 
 }
 h4, h5 { color: #000000; padding: 0.2em; font-size: 100%;}
-th {background: #e7e7ff;}
-td {background: #f3f7ff;}
-dt {margin-top: 0.2em;}
+table {border-style: solid; border-width: 1px; border-color: #00007f;border-right: 0px; }
+th {background: #e7e7ff; border-color: #00007f; border-width: 1px; border-style: solid; border-left: 0px; border-top: 0px;}
+td {background: #f3f7ff; border-color: #00007f; border-width: 1px; border-style: solid; border-left: 0px; border-bottom: 0px; border-top: 0px;}
+dt {margin-top: 0.2em; border-width: 0px;}
 caption { color: #7f0000;font-weight: bold;}
 pre { margin-top: 1px;}
 code { margin-top: 1px; color: #0000ff;}
@@ -37,49 +38,61 @@ blockquote { margin-top: 0px;}
 
 <body>
 <hr/>
-<h1>DDSL: Digital Dynamic Simulation Library for C/C++ (based on Graph Theory)</h1>
-<hr/>
+<h1>DDSL: Digital Dynamic Simulation Library for C/C++,based on Graph Theory</h1>
+
 <div align="right">
-This software can be redistributed under <a href="https://www.gnu.org/licenses/lgpl-3.0.en.html" target="_new">GNU Lesser General Public License</a>.<br/> And <a href="https://github.com/ShigeoKobayashi/ddsl/" target="_new">every source codes can be obtained through GitHub</a><br/>
+このソフトウェアは<a href="https://www.gnu.org/licenses/lgpl-3.0.en.html" target="_new">GNU Lesser General Public License</a>に従って再配布できます。<br/> ソースコード等は<a href="https://github.com/ShigeoKobayashi/ddsl/" target="_new">GitHub</a>から全てをダウンロードできます。<br/>
 Copylight (c) 2020 Shigeo Kobayashi. All rights reserved.<br/>
 <a href="./ddsl_en.html">[==&gt;English]</a>
 </div>
-<hr/>
-<font size="1">
-I dedicate this software to two great scientists&amp;mathematicians,my former boss Junkichi Tunekawa and the professor Masao Iri. (They are no longer with us. This software is the proof that I had a time,although it was very short period,to work with them.)
-</font>
-<hr/>
+<table width="100%"><tr><td><a href="#OVER_VIEW">概要</a></td><td><a href="#FLAG">フラグ(属性)</a></td><td><a href="#API_REF">関数一覧</a></td><td><a href="#REF">参考</a></td></tr></table>
+<p/>
+<b>DDSL(<U>D</U>igital <U>D</U>ynamic <U>S</U>imulation <U>L</U>ibrary for C/C++,based on Graph Theory)</b>
+は動的（静的）な数値シミュレーション用の C/C++ ライブラリーです。<br/>
 
+<b>DDSL</b> は静的シミュレーション用に<a href="#TRIANGULAR">Newton法（非線形連立方程式解法）<a>を、動的シミュレーション用に常微分方程式解法 <a href="#INTEGRATED">Euler法、Backward Euler法、Runge-Kutta法</a>を実装しています。もっとも、これらの解法をユーザーが直接呼び出すことはありません。グラフ理論（グラフ処理）を活用して自動的に計算順序、代数連立方程式（非線形）、常微分方程式をDDSLが組み立てて解くことが出来ます（グラフ理論については<a href="#REF">文献等</a>を参照）。<br/>
 
-<b>DDSL(<U>D</U>igital <U>D</U>ynamic <U>S</U>imulation <U>L</U>ibrary for C/C++,based on Graph Theory)</b> is the library to assist numerical simulation for <b>dynamics and statics</b>.<br/>
-<b>DDSL</b> implements <b>Newton-method</b> for solving non-linear algebraic eqution systems for static simulation and <b>Euler,Backward Euler,and Runge-Kutta methods</b> for solving ordinary differential equation systems for dynamic simulation.<br/>
-The users,although,need not use these methos directly with the assistance of Graph-theory(about the theory,see <a href="#REF">References</a>.).
+<a name="OVER_VIEW"/>
+<h2>概要</h2>
+<table wodth="100%"><tr><td><a href="#PROCESSOR">DDS_PROCESSOR</a></td><td><a href="#VARIABLE">DDS_VARIABLE</a></td></tr></table>
+DDSLを利用するにはプロセッサー(<a href="#PROCESSOR">DDS_PROCESSOR</a>)と複数の変数(<a href="#VARIABLE">DDS_VARIABLE</a>)を定義する必要があります。<br/>
+プロセッサー(DDS_PROCESSOR)は全ての変数(DDS_VARIABLE)を管理し、代数方程式や常微分方程式等を組み立てた後に解きます。
+<p/>
+<table width="100%"><tr><td><b>重要なのは計算して欲しい変数に<a href="#REQUIRED">DDS_FLAG_REQUIRED</a>フラグを設定することです（後述）。DDSLは<a href="#REQUIRED">DDS_FLAG_REQUIRED</a>フラグの付いた変数を計算するため、計算順序の決定等、すべてを自動的に処理して計算を実行します（以下の例参照）。</b></td></tr></table>
+<p/>
+DDS_PROCESSOR と DDS_VARIABLE は c の struct へのポインターで ddsl.h で定義されています。<p/>
+<b>※:</b> プログラミングには ddsl.h をソースプログラムに include してから適切なライブラリーをリンクしてください。<br/>
+<b>※:</b> DDSが提供する関数などの名前は "DDS_" や "Dds" で始まります。
 
-<h2>Overview</h2>
-
-To utilize DDSL,the user must define at least one processor(DDS_PROCESSOR or DdsProcessor*) and more than or equal to one variable(DDS_VARIABLE or DdsVariable*).<br/>
-DDS_PROCESSOR(DdsProcessor*) and DDS_VARIABLE(DdsVariable*) are pointers of the structures defined in ddsl.h.<p/>
-<b>Note:</b> Include ddsl.h in the source code and link appropriate libraries(including DDSL library).<br/>
-<b>Note:</b> Any function name offered by this library has prefix "Dds".
-
+<a name="PROCESSOR"/>
 <h3>DDS_PROCESSOR</h3>
-The processor(DDS_PROCESSOR) keeps every variables(DDS_VARIABLE) and solves algebraic and ordinary differential equations.<br/>
-To define DDS_PROCESSOR:
-<pre><code>
+DDS_PROCESSORの定義：
+<code><pre>
     DDS_PROCESSOR p;
     int e = DdsCreateProcessor(&p,10);
     if(e!=0) printf("DdsCreateProcessor() returned an error\n");
-</code></pre>
-DdsCreateProcessor(&p,10) allocates memories for DDS_PROCESSOR(DdsProcessor) structure and sets it's pointer to p. The second argument 10 is the number of variables(explained later) the DdsProcessor() can keep which will be automatically extended if necessary. DdsCreateProcessor() returns 0 if DdsProcessor is normally allocated,or returns non-zero error code.
+</pre></code>
+<a href="#DdsCreateProcessor">DdsCreateProcessor(&p,10)</a> は DDS_PROCESSOR に必要なメモリーを確保して、そのアドレスを p にセットします。第二引数 10 は p が管理できる変数の個数を指定します。これは後に必要なら自動的に拡大されます。
+ DdsCreateProcessor() は正常終了すれば 0 を、エラーの場合はゼロ以外を返します（具体的な戻り値は ddsl.h を参照）。
+<p/>
+<b>※:</b>DdsCreateProcessor() は自動的に二つの組み込み変数（動的シミュレーション用の時間と積分時間刻み） <a href="#DdsTime">time</a> と <a href="#DdsStep">step</a> を用意します。
 
-<h3>DDS_VARIABLE</h3>
-The variable(DDS_VARIABLE) has value(double),<a href="#FLAG">flags(attributes)</a>,and may have right hand side variables and function pointer to compute it's value.<br/>
-Variable(DDS_VARIABLE) must be registered to the processor(DDS_PROCESSOR) as:
-<table vorder="0">
+<a name="VARIABLE"/>
+<h3>DDS_VARIABLE の簡単な静的計算例</h3>
+変数(DDS_VARIABLE)は値(double),<a href="#FLAG">フラグ/属性(unsigned int)</a>を持ち、右辺変数(以後 <b>RHSV</b> と表記)と変数の値を計算するための関数（ポインター）を必要なら持つことが出来ます。<br/>
+<b>※:</b> 変数の値を変更するのはDDSLでユーザーは関数内で他の変数を含めて変更してはいけません。
+<br/>
+<b>定義:</b><blockquote>
+<b>上流</b>: <b>y = f(u,v,w)</b>、この場合 u,v,w は y の<b>上流</b>。<br/>
+<b>下流</b>: <b>x = f(y)</b>、 x は y の<b>下流</b>に位置します。
+</blockquote>
+
+全ての変数はプロセッサー(DDS_PROCESSOR)に、以下の様に、登録する必要があります。
+<table width="100%">
 <tr><td>
 <img src="./fx.png">
 </td><td>
-<pre><code>
+<code><pre>
     DDS_PROCESSOR p;
     DDS_VARIABLE y,x1,x2;
     DdsCreateProcessor(&p,10);
@@ -91,9 +104,9 @@ Variable(DDS_VARIABLE) must be registered to the processor(DDS_PROCESSOR) as:
     printf("Value: y=%lf x1=%lf x2=%lf\n",DdsGetValue(y),DdsGetValue(x1),DdsGetValue(x2));
     /* ==&gt; Value: y=0.718282 x1=1.000000 x2=2.000000 */
     DdsDeleteProcessor(&p);
-</code></pre>
+</pre></code>
 </td><td>
-<pre><code>
+<code><pre>
    double CompY(DDS_PROCESSOR p, DDS_VARIABLE y)
    {
 	DDS_VARIABLE x1 = DdsGetRHSV(y, 0);
@@ -102,177 +115,824 @@ Variable(DDS_VARIABLE) must be registered to the processor(DDS_PROCESSOR) as:
 	double xv2 = DdsGetValue(x2);
 	return exp(xv1)-xv2;
    }
-</code></pre>
+</pre></code>
 </td></tr>
 </table>
-<b>Note:</b> Functions used in the example may return non-zero value in case of error,which is ignored to be checked in this example.<p/>
-DdsAddVariableV() allocates memories for the variable and register it to the processor.<br/>
-For instance:<blockquote>
-  DdsAddVariableV(p,&amp;y,  "y",  DDS_FLAG_REQUIRED, 0.0, CompY,2,x1,x2)
-</blockquote>
-allocates memories of DDS_VARIABLE,sets it's pointer to &y,and register the newly allocated variable(y) to the processor p.
-Also DdsAddVariableV() sets flag DDS_FLAG_REQUIRED,value 0.0,function pointer to compute the value,and right hand side variables x1,x2(2 is the number of right hand side variables, x1,x2), to y. 
-The flag <b>DDS_FLAG_REQUIRED</b> is the specification that the value of the variable y is what the user wants to know.
-<blockquote>
-    DdsAddVariableV(p,&amp;x1, "x1", DDS_FLAG_SET, 1.0, nullptr,0)
-</blockquote>
-The flag <b>DDS_FLAG_SET</b> for x1 and x2 is a constant requirement,and the value specified (1.0 or 2.0) will never be changed even right hand variables are given.<br/>
-DdsCompileGraph(p, 0) checks relations and determine computation order,and
- DdsComputeStatic(p) simply computes the required value of y.<br/>
-Instead of redundancy above,the user will obtain flexibility.
-If you change flags as:
-<pre><code>
-    DdsAddVariableV(p,&x1, "x1", DDS_FLAG_REQUIRED, 1.0, nullptr,0);
+<b>※:</b>例では簡略のため関数の戻り値をチェックしていませんが、本来エラーかどうかチェックすべきです。<p/>
+
+<a href="#DdsAddVariableV">DdsAddVariableV(p,&amp;y,  "y",  DDS_FLAG_REQUIRED, 0.0, CompY,2,x1,x2)</a><br/>
+は変数（DDS_VARIABLE）のメモリーを確保して、それを y にセットします。さらに y をプロセッサー p に登録します。<br/>
+さらに DdsAddVariableV() はフラグ <a href="#REQUIRED">DDS_FLAG_REQUIRED</a>、値 0.0、y の値を計算する関数ポインター <b>CompY</b>、RHSV x1,x2(2 は RHSV x1、x2 の個数), を y にセットします。 <br/>
+<b>※:</b> この例では y のRHSV(右辺変数) x1 、 x2 は y が p に登録される前に既に登録されています。そうでない場合、<a href="#DdsCompileGraph">DdsCompileGraph(p, 0)</a>を呼び出す前に RHSV を再設定する必要があります（次例）。<p/>
+フラグ <b>DDS_FLAG_REQUIRED</b> は最終的に値を知りたい変数に付与します。<p/>
+
+<b>DdsAddVariableV(p,&amp;x1, "x1", DDS_FLAG_SET, 1.0, NULL,0)</b><br/>
+x1 と x2 に設定した<a href="#SET">DDS_FLAG_SET</a>フラグは定数指定です。従って設定した値 (1.0 、 2.0) は不変で、例え x1 と x2 に値を計算する関数や RHSV が定義されていても無視されます。<p/>
+<a href="#DdsCompileGraph">DdsCompileGraph(p, 0)</a> は変数関係をチェックした後、計算順序等、計算に必要なすべてを準備します。そして <a href="#DdsComputeStatic">DdsComputeStatic(p)</a> が求められている y を計算します。<p/>
+例は冗長に見えますが、代わりに柔軟性が得られます。<br/>
+例えば、フラグを以下の様に変更すると:
+<code><pre>
+    DdsAddVariableV(p,&x1, "x1", DDS_FLAG_REQUIRED, 1.0, NULL,0);
     DdsAddVariableV(p,&y,  "y",  DDS_FLAG_TARGETED, 0.0, CompY,2,x1,x2);
     /* ==&gt; Value: y=0.000000 x1=0.693148 x2=2.000000 */
-</code></pre>
-<b>DDS_FLAG_TARGETED</b> means that the value of y is to be 0.0 after computations. And the value of x1,which is not DDS_FLAG_SET this time,will be the value that make the value of y be 0.0.  DDSL creates (non-linear) equation(s) and solves it automatically according to the user's specifications.
+</pre></code>
+<a href="#TARGETED">DDS_FLAG_TARGETED</a> は y の値を<b>計算の結果</b>（従属変数）として 0.0 にしたいという意味になります。
+そのために x1 が独立変数として（DDS_FLAG_SET のフラグは外されています）、 y を 0.0 にするために計算されることになります。 指定に応じて、 DDSL は自動的に非線形方程式（通常は連立）を組み立てて y の値を計算します。<p/>
+<b>※:</b> DdsAddVariableV() の後でもフラグは自由に変更できます。
 
-<h3>What the user must do:</h3>
-As described so far,the user must invoke:
+<h3>非定常・定常を含む動的例題（DDS_FLAG_INTEGRATED 、DDS_STEADY_STATE）</h3>
+以下の例は常微分方程式による積分例です。最後に <a href="#INTEGRATED">定常状態</a> を代数的に一気に計算します。
+<table width="100%">
+<tr><td>
+<img src="./i.png">
+</td><td>
+<code><pre>
+	/* dy/dt = A(C-y) + B */
+	/* dy/dt(inf)==&gt;0.0, y = (AC+B)/A  */
+	/* Steady state y = 5.0 */
+	DDS_PROCESSOR p;
+	DDS_VARIABLE y, dydt, A,B,C, time, step;
+	DDS_VARIABLE* pVs, *pVr;
+	int i,j,nv, nr;
+	DdsCreateProcessor(&p, 10);
+	DdsAddVariableV(p, &A, "A", DDS_FLAG_SET, 1.0, NULL, 0);
+	DdsAddVariableV(p, &B, "B", DDS_FLAG_SET, 2.0, NULL, 0);
+	DdsAddVariableV(p, &C, "C", DDS_FLAG_SET, 3.0, NULL, 0);
+	DdsAddVariableV(p, &y, "y", DDS_FLAG_REQUIRED|DDS_FLAG_INTEGRATED, 1.0, NULL,1, &dydt);
+	DdsAddVariableV(p, &dydt, "dy/dt", DDS_FLAG_REQUIRED, 0.0, CompDYDT, 4,&A,&B,&C,&y);
+	time = DdsTime(p);
+	step = DdsStep(p);
+	pVs = DdsGetVariables(&nv, p);
+	for (i = 0; i < nv; ++i) {
+		pVr = DdsGetRhsvs(&nr, pVs[i]);
+		for (j = 0; j < nr; ++j) {
+			pVr[j] = *((DDS_VARIABLE*)pVr[j]);
+		}
+	}
+	DdsSetValue(step, 0.1);
+	DdsCompileGraph(p, 0);
+	for (i = 0; i < 11; ++i) {
+		DdsComputeDynamic(p,0);
+		printf("Dynamic:Time=%lf dydt=%lf y=%lf\n",
+			DdsGetValue(time), DdsGetValue(dydt), DdsGetValue(y));
+	}
+	DdsCompileGraph(p, DDS_STEADY_STATE);
+	DdsComputeStatic(p);
+	printf("Steady :Time=%lf dydt=%lf y=%lf\n",
+		DdsGetValue(time), DdsGetValue(dydt), DdsGetValue(y));
+	DdsDeleteProcessor(&p);
+</pre></code>
+</td><td>
+<code><pre>
+double CompDYDT(DDS_PROCESSOR p, DDS_VARIABLE y)
+{
+	DDS_VARIABLE A = DdsGetRHSV(y, 0);
+	DDS_VARIABLE B = DdsGetRHSV(y, 1);
+	DDS_VARIABLE C = DdsGetRHSV(y, 2);
+	DDS_VARIABLE Y = DdsGetRHSV(y, 3);
+	double AV = DdsGetValue(A);
+	double BV = DdsGetValue(B);
+	double CV = DdsGetValue(C);
+	double yv = DdsGetValue(Y);
+	return AV*(CV-yv)+BV;
+}
+
+/* Computation results 
+Dynamic:Time=0.000000 dydt=4.000000 y=1.000000
+Dynamic:Time=0.100000 dydt=3.619000 y=1.380650
+Dynamic:Time=0.200000 dydt=3.274607 y=1.725071
+Dynamic:Time=0.300000 dydt=2.962992 y=2.036717
+Dynamic:Time=0.400000 dydt=2.681031 y=2.318706
+Dynamic:Time=0.500000 dydt=2.425901 y=2.573860
+Dynamic:Time=0.600000 dydt=2.195050 y=2.804734
+Dynamic:Time=0.700000 dydt=1.986167 y=3.013638
+Dynamic:Time=0.800000 dydt=1.797161 y=3.202662
+Dynamic:Time=0.900000 dydt=1.626141 y=3.373699
+Dynamic:Time=1.000000 dydt=1.471396 y=3.528459
+Steady :Time=1.000000 dydt=0.000000 y=5.000000
+*/
+</pre></code>
+</td></tr>
+</table>
+<a name="RHSV" />
+全ての変数は（もちろん全ての RHSVも） <a href="#DdsCompileGraph">DdsCompileGraph()</a> を呼び出す前にプロセッサーに登録されていなければなりません。
+しかし、ループ等の問題で <a href="#DdsAddVariableV">DdsAddVariableV()</a> 呼び出し時点で RHSV を全て登録するのは困難な時があります。<br/>
+この場合、RHSV 定義時はポインターを仮に登録して、後に以下の様に登録し直す方法があります。<br/>
+以下はその例です（上記例から抜粋）。
+<code><pre>
+	pVs = DdsGetVariables(&nv, p);
+	for (i = 0; i < nv; ++i) {
+		pVr = DdsGetRhsvs(&nr, pVs[i]);
+		for (j = 0; j < nr; ++j) {
+			pVr[j] = *((DDS_VARIABLE*)pVr[j]);
+		}
+	}
+</pre></code>
+<b>※:</b> この時の RHSV はポインター <a href="#DdsAddVariableV">DdsAddVariableV</a>(p, &amp;dydt, "dy/dt", DDS_FLAG_REQUIRED, 0.0, CompDYDT, 4,<b>&amp;A,&amp;B,&amp;C,&amp;y</b>)).<br/>
+<b>※:</b> DdsAddVariableV() は与えられた RHSV を格納するだけでチェックしません（NULL も指定可）。 <p/>
+
+<b><a href="#DdsAddVariableV">DdsAddVariableV</a>(p, &y, "y", DDS_FLAG_REQUIRED|DDS_FLAG_INTEGRATED, 1.0, NULL,1, &dydt)</b><br/>
+y の登録で <a href="#INTEGRATED">DDS_FLAG_INTEGRATED</a> フラグは y が dydt を積分して（常微分方程式を解いて）計算されることを意味します（dydt は y の時間微分）。<br/>
+左図の様に y 以外の変数は特定の時間平面上で計算されます。一方 y は時間刻み毎に過去(dT前)の dydt から計算されます（Euler法）。<br/>
+
+<a href="#DdsComputeDynamic">DdsComputeDynamic(p,0)</a> は DDS_FLAG_INTEGRATED 変数を <b>1 ステップ分だけ</b>積分します。その後、変化した y の値に対応させるために <a href="#DdsComputeStatic">DdsComputeStatic(p)</a> を内部的に呼び出します。<p/>
+
+<b>※:</b> DDSL は <a href="#DdsCompileGraph">DdsCompileGraph(p, DDS_STEADY_STATE)</a> と呼び出すことで<a href="#INTEGRATED">定常状態</a> を一気に計算することが出来ます。<br/>
+<b>※:</b> y(=DDS_FLAG_INTEGRATED:&lt;I&gt;) は下流の変数からは定数(=DDS_FLAG_SET:&lt;S&gt;)の様に見えます(参照：<a href="#FLAG">フラグ</a>)。<br/>
+<b>※:</b> 以降、詳細に説明します。<p/>
+
+
+<h3>ユーザーがすること:</h3>
+前例の様に、大体、以下のような順序で以下の関数を呼び出します:
 <ol>
-<li><b>DdsCreateProcessor()</b>...create a processor</li>
-<li><b>DdsAddVariableV()</b><br/>
-<b>DdsAddVariableA()</b>...create a variable and register it to the processor.
-    The user also sets the (initial) value of y,the right hand side variables (hereinafter referred to as <b>RHSV</b>),and the function to compute the value of y. The user also sets <b>FLAGS</b>(attributes) of y that determins the computation order.</li>
-<li><b>DdsCompileGraph()</b>... checks relations of each variable and determines computation order.</li>
-<li><b>DdsComputeStatic()</b> or<br/> 
-<b>DdsComputeDynamic()</b>... compute variable's value by solving non-linear equations or ordinary differential equations,according to the computation order determined by DdsCompileGraph().</li>
-<li><b>DdsDeleteProcessor()</b>... frees every memories allocated by the processor.</li>
+<li><a href="#DdsCreateProcessor">DdsCreateProcessor()</a>...プロセッサーの作成</li>
+<li><a href="#DdsAddVariableV">DdsAddVariableV()</a><br/>
+<a href="#DdsAddVariableA">DdsAddVariableA()</a>...変数(y)を作成しプロセッサーに登録。同時に変数の値（初期値）、右辺変数(RHSV)の定義、y の値を計算する関数のセット、さらに、y の<a href="#FLAG">フラグG</a>(属性)をセットします。
+フラグは計算順序や連立方程式等の組み立てに決定的な役割を持ちます。</li>
+<li><a href="#DdsCompileGraph">DdsCompileGraph()</a>... 変数や因果関係のチェック後、計算順序など計算実行の全てを準備します。</li>
+<li><a href="#DdsComputeStatic">DdsComputeStatic()</a> or<br/> 
+<a href="#DdsComputeDynamic">DdsComputeDynamic()</a>... DdsCompileGraph()が組み立てた計算を実行します。</li>
+<li><a href="#DdsDeleteProcessor">DdsDeleteProcessor()</a>... プロセッサーと個々の変数が確保したメモリーを開放します。</li>
 </ol>
 
-<h3>What DDSL can do:</h3>
-DDSL can:
+<h3>DDSL の機能:</h3>
+DDSL は以下の処理を実行します:
 <ol>
-<li>remove variables having no contribution directly or indirectly for computing variables of DDS_FLAG_REQUIRED from any computation.</li>
-<li>construct computation order of each variable.</li>
-<li>automatically detect loop such as y=f(y),and rearrange it to the equation system as y1 = f(y2), y1-y2 =&gt;0.</li> 
-<li>automatically construct non-linear eqution sysytems and solve them.</li>
-<li>solve ordinally differential equations if given.</li>
-<li>obtain steady state by changing ordinally differential equations to algebraic equation systems and solve them.</li>
+<li>直接的・間接的に、 <a href="#REQUIRED">DDS_FLAG_REQUIRED</a> の変数計算に寄与しない変数を計算から除外する。</li>
+<li><a href="#DIVISIBLE">ループの検出</a>：　即ち y=f(y)、のような式は y2 = y1 - f(y1), y2 ==&gt;0.0 の様に変形して解きます。</li> 
+<li>必要なら<a href="#TRIANGULAR">非線形連立方程式</a>を組み立て（解き）ます。</li>
+<li>計算される変数の<a href="#DdsGetVariableSequence">計算順序</a>を組み立て（解き）ます。</li>
+<li>与えられた<a href="#INTEGRATED">常微分方程式</a>を解きます。</li>
+<li>必要なら<a href="#INTEGRATED">定常状態</a>を常微分方程式から代数方程式に変換して解きます。</li>
 </ol>
-How DDSL realizes these will be hereinafter described.
+これらを DDSL がどのように実現するのか以降に詳述します。
 
 <a name="FLAG" />
-<h2>Variable Flags</h2>
-The flags or attributes (see ddsl.h) are the most impotant part. A variable has two <b>unsigned int</b> element for <b>user's flags</b> and <b>system's flags</b>. User's flags are controled by the user and DDSL never change them. Flag is a 1-bit of unsigned integer which can be set or reset. DDSL checks user's flags and copies them to system's if they are correct. DDSL controls(set or reset) system's flag during the processing.<br/>
-More than one flags can be specified as:<br/>
+<h2>フラグ(属性)</h2>
+<table><tr><td><a href="#UFLAG">ユーザーフラグ</a></td><td><a href="#SFLAG">システムフラグ</a></td><td><a href="#TRIANGULAR">ブロック三角分解</a></td></tr></table>
+変数のフラグ（属性）(ddsl.hで定義されています)は最も重要な部分です。変数はユーザフラグとシステムフラグの２つの <b>32-bit unsigned int</b> フラグを持ちます。ユーザーフラグはユーザーが設定します。DDSL がユーザフラグを設定・変更することはありません。個々のフラグは 32-bit のうちの 1-bit で set(1) または reset(0) されます。
+DDSL はユーザフラグをチェックした後に、正しければシステムフラグ領域にコピーします。その後、処理に応じてシステムフラグを追加・変更します。<br/>
+二つ以上のユーザーフラグを以下の様に | で連結して指定することが出来ます。<br/>
 <pre><code>
     DdsAddVariableV(p,&x2, "x2", DDS_FLAG_SET|DDS_FLAG_VOLATILE, 2.0, NULL,0);
 </code></pre>
-or
+または
 <pre><code>
     DdsSetUserFlag(x2,DDS_FLAG_SET|DDS_FLAG_VOLATILE);
 </code></pre>
 
-<b>Note:</b><blockquote>
-<b>Upstream</b>: In case like <b>y = f(u,v,w)</b>.  Variables u,v,and w are <b>upstream</b> variables of y.<br/>
-<b>Downstream</b>:  In case like <b>x = f(y)</b>. Variable x is <b>downstream</b> variables y.
-</blockquote>
-
-
+<a name="UFLAG"/>
+<h3>ユーザーフラグ:</h3>
+<table width="100%"><tr><td>
+<a href="#REQUIRED">DDS_FLAG_REQUIRED</a></td><td><a href="#SET">DDS_FLAG_SET</a></td><td><a href="#TARGETED">DDS_FLAG_TARGETED</a></td><td><a href="#INTEGRATED">DDS_FLAG_INTEGRATED</a></td></tr><tr><td><a href="#VOLATILE">DDS_FLAG_VOLATILE</a></td><td><a href="#DIVISIBLE">DDS_FLAG_DIVISIBLE</a></td><td><a href="#NON_DIVISIBLE">DDS_FLAG_NON_DIVISIBLE</a>
+</td><td> </td></tr></table>
+<b>※:</b> ユーザーフラグは 32-ビット unsigned int 中の下位 12-ビットを使用します。従って、残り、上位 20-ビット はユーザが自由に使用できます(DDSL はユーザーフラグの上位 20-ビット を参照しません)。
+<p/>
+<a name="REQUIRED"/>
 <table border="1" width="100%">
-<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
-<tr><th>User flag name</th><th>value</th><th>denoted:</th>
-<tr><td><b>DDS_FLAG_REQUIRED</b></td><td>0x00000001</td><td><b>&lt;R&gt;</b></td></tr>
+<col width="75%">
+<tr><th align="left">ユーザーフラグ（記法）</th><th align="left">値</th>
+<tr><td><b>DDS_FLAG_REQUIRED (&lt;R&gt;)</b></td><td>0x00000001</td></tr>
 </table>
-<blockquote>
-The user must set this flag to any variable of which value is wanted.<br/>
-<b>If there is no variable of &lt;R&gt; flag,then nothing is computed.</b>
-</blockquote>
-
+もっとも重要な、このフラグは最終的に値を知りたい変数に付与します。DDSLは&lt;R&gt;変数を計算するために計算順序を含めてすべてを準備・処理します。<br/>
+<b>もし &lt;R&gt; 変数が無ければ計算は何も実行されません。</b>
+<p/>
+<a name="SET"/>
 <table border="1" width="100%">
-<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
-<tr><th>User flag name</th><th>value</th><th>denoted:</th>
-<tr><td><b>DDS_FLAG_SET</b></td><td>0x00000002</td><td><b>&lt;S&gt;</b></td></tr></table>
-
-<table width="100%">
+<col width="75%">
+<tr><td><b>DDS_FLAG_SET (&lt;S&gt;)</b></td><td>0x00000002</td></tr></table>
+<table width="100%" border="1">
 <tr><td><img src="./s.png"></td><td align="left">
-&lt;S&gt; is a constant specification.<br/>
-Any variable having this flag is never computed even RHSVs and the function to compute its value are defined.<br/>This specification may cause to divide one connected component into more than one.
+&lt;S&gt; は定数指定です。<br/>
+&lt;S&gt; が指定されると、例え値を計算する関数や右辺変数が定義されていても全ては無視され、値が計算されることはなくなります。<br/>
+この指定がされると（右辺変数が定義されていた場合、無視されることにより）連結成分が分割される場合があります。
 </td></tr>
 </table>
-<b>Note:</b><blockquote>
-<b>Connected component</b> is a group of variables that are connected directly or indirectly connected each other.</blockquote>
+<b>※:</b><b>連結成分</b>(connected component) とは直接・間接的に連結された変数のグループのことです。
+<p/>
 
+<a name="TARGETED"/>
 <table border="1" width="100%">
-<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
-<tr><th>User flag name</th><th>value</th><th>denoted:</th>
-<tr><td><b>DDS_FLAG_TARGETED</b></td><td>0x00000004</td><td><b>&lt;T&gt;</b></td></tr>
+<col width="75%">
+<tr><td><b>DDS_FLAG_TARGETED (&lt;T&gt;)</b></td><td>0x00000004</td></tr>
 </table>
-
-<table width="100%">
+<table width="100%" border="1">
+<col width="25%"><col width="60%">
 <tr><td><img src="./t.png"></td><td align="left">
-The value of &lt;T&gt; variable is to be specified value finally by solving non-linear equation. <br/>
-From downstream variables,&lt;T&gt; look like &lt;S&gt;. &lt;A&gt; variable must exist on the upstream of &lt;T&gt;.<br/>
-This specification may cause to divide one connected component into more than one.
+&lt;T&gt; は<b>計算結果として指定した値</b>になることを強制する指定です。<br/>
+従って、<b>&lt;T&gt;（従属変数）</b>を指定した値にするため、自由に値を変更できる<b>独立変数(<a href="#FREE">&lt;F&gt;</a></b>、DDSLが検出）が上流に存在することが必要になります。
+&lt;F&gt;変数は値を自由に変更できるので右辺変数(RHSV)を持たず、&lt;S&gt;でもありません。
+&lt;T&gt; 変数を指定した値にするためには方程式（一般に非線形連立）を解く必要があります。 <p/>
+<b>連立方程式の解の存在条件（DDSLがチェックします）:</b><p/>
+ y<sub>&lt;T&gt;</sub> = f(x<sub>&lt;F&gt;</sub>)
+<ol>
+<li>従属変数 y (=&lt;T&gt;) の数と独立変数 x (=<a href="#FREE">&lt;F&gt;</a>) の数は一致する必要があります（同一連結成分上で）。</li>
+<li>各 <a href="#FREE">&lt;F&gt;</a> から &lt;T&gt; に到達する<b>独立したルート</b>が存在する必要があります。
+(<a href="#FREE">&lt;F&gt;</a> と &lt;T&gt; の一対一対応)。</li>
+</ol>
+<b>※:</b> 計算前の<a href="#FREE">&lt;F&gt;</a> 変数の値は初期値となります。<br/>
+<b>※:</b> 一般に N 個の &lt;T&gt; (N個の <a href="#FREE">&lt;F&gt;</a>) は N 次元の連立方程式（<a href="#TRIANGULAR">可能なら小さくできます</a>。）になります。<p/>
+<b>※:</b> 下流の変数から見れば &lt;T&gt; は &lt;S&gt; に見えます。<br/>
+<b>※:</b> この指定の結果、連結成分が分割されることがあります。
+</td><td>
+<img src="./ft_route.png"><br/><p/>
+上図は、２個の <a href="#FREE">&lt;F&gt;</a> と２個の &lt;T&gt; が接続しているので、２次元の連立方程式に見えます。
+しかし、途中で一本のルートになっていて<b>２個の「独立した」ルート</b>がないので、計算するまでもなく解は存在しません(計算前にDDSLがチェックします)。
 </td></tr>
 </table>
-
-
+<p/>
+<a name="DIVISIBLE"/>
 <table border="1" width="100%">
-<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
-<tr><th>User flag name</th><th>value</th><th>denoted:</th>
-<tr><td><b>DDS_FLAG_INTEGRATED</b></td><td>0x00000008</td><td><b>&lt;I&gt;</b></td></tr></table>
-
-<table width="100%">
-<tr><td><img src="./i.png"></td><td align="left">
-Integration specification. &lt;I&gt; variable's value is computed by integration. &lt;I&gt; must have only 1 RHSV which is the derivative(&lt;DR&gt;)of the ordinary differential equation. The function pointer to compute(integrate) the value of &lt;I&gt; is not necessary because integration methods such as Euler,Backward Euler,and Runge-Kutta methods are built in.
-</td></tr>
-</table>
-
-<table border="1" width="100%">
-<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
-<tr><th>User flag name</th><th>value</th><th>denoted:</th>
-<tr><td><b>DDS_FLAG_DIVISIBLE</b></td><td>0x00000020</td><td><b>&lt;D&gt;</b></td></tr></table>
-<table width="100%">
+<col width="75%">
+<tr><td><b>DDS_FLAG_DIVISIBLE (&lt;D&gt;)</b></td><td>0x00000020</td></tr></table>
+<table width="100%" border="1">
 <tr><td><img src="./loop.png"></td><td align="left">
+&lt;D&gt;は分割候補指定です。<br/>
+左辺変数 (y とします) が直接・間接的に右辺変数となること（ y = f(y) ）はループとなります。
+この場合、ｙ を次の様に分割( y ==&gt; y1 , y2 )してループ上の変数を計算する必要があります。
+y1 は <a href="#FREE">&lt;F&gt;</a>) になり、y2 は <a href="#TARGETED">&lt;T&gt;</a>) となり、以下の様に処理されます。<br/>
+  y2 = y1 - f(y1)<br/>
+  y2==&gt;0.0<br>
+y1 は &lt;F&gt;、 y2 は &lt;T&gt; であると同時に両者とも <a href="#DIVIDED">&lt;DD&gt;</a> となります。<p/>
+DDSL は自動的にループを検出して上記の処理を実行します。<br/>
+どのループ上の変数も分割の対象になり得ます。
+従って、ユーザは初期値の与えやすさなどを考慮して、分割の候補を &lt;D&gt;(DDS_FLAG_DIVISIBLE) フラグで指定することが出来ます。 DDSL は &lt;D&gt; フラグ変数を優先して分割します。しかし、複数のループに関係する変数があれば、そちらが優先されるので常に &lt;D&gt; 変数が分割されるとは限りません。
+実際に分割された変数にはシステムフラグ <a href="#DIVIDED">DDS_SFLAG_DIVIDED(&lt;DD&gt;)</a> が付与されます。<p/>
+<b>※:</b> &lt;D&gt; が常に分割されるとは限りません。<br/>
+<b>※:</b> y1 は元の y と同じです。新規に作成される変数 y2 は名前として yの名前+'+' となります。
 </td></tr>
 </table>
-
+<p/>
+<a name="NON_DIVISIBLE"/>
 <table border="1" width="100%">
-<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
-<tr><th>User flag name</th><th>value</th><th>denoted:</th>
-<tr><td><b>DDS_FLAG_NON_DIVISIBLE</b></td><td>0x00000040</td><td><b>&lt;N&gt;</b></td></tr></table>
-
-<table border="1" width="100%">
-<col width="50%"><col width="30%" align="left"><col width="20%" align="left">
-<tr><th>User flag name</th><th>value</th><th>denoted:</th>
-<tr><td><b>DDS_FLAG_VOLATILE</b></td><td>0x00000010</td><td><b>&lt;V&gt;</b></td></tr></table>
-
-
-
-#define DDS_FLAG_MASK           0x00000FFF  /* Mask */
-
-<h3>&lt;F&gt;-&lt;T&gt; route</h3>
-<table border="1" width="100%">
-<col width="30%">
-<col width="40%">
-<tr><td>
-<img src="./ft_route.png">
-</td><td>
-
-
-</td><td>
-<img src="./not_loop.png">
-</td><td>
+<col width="75%">
+<tr><td><b>DDS_FLAG_NON_DIVISIBLE (&lt;N&gt;)</b></td><td>0x00000040</td></tr>
 </table>
+&lt;N&gt; 指定は、上記 &lt;D&gt; 指定とは逆に、<b>分割してほしくない</b>変数に付与します。ただ、上記 &lt;D&gt; 指定と同じ理由で分割されないとは限りません。<p/>
 
-<h3>Block triangular decomposition</h3>
+<a name="INTEGRATED"/>
+<table border="1" width="100%">
+<col width="75%">
+<tr><td><b>DDS_FLAG_INTEGRATED (&lt;I&gt;)</b></td><td>0x00000008</td></tr></table>
+&lt;I&gt; は積分指定です。右辺変数は一つで(<a href="#DERIVATIVE">&lt;DR&gt;</a>)（つまり、時間微分）と見なされます。　積分は常微分方程式を解くことになります。　左辺変数を計算するための関数ポインターは、常微分方程式解法が実装されているために、指定する必要はありません（Euler法、Backward Euler法、そしてRunge-Kutta法）。
+<p/>
+<b>定常状態の直接計算:</b>
+<blockquote>もし、存在するなら、積分を続ければ定常状態にいつかは達するはずです。しかし、多分、計算はかなりの量になります。<p/>
+DDSL は以下の様に定常状態を代数的に直接計算することが出来ます。
+<ol>
+<li>&lt;I&gt を &lt;F&gt 変数に変更する</li>
+<li>時間微分変数 &lt;DR&gt を値 0.0 （時間変化無し==&gt;つまり定常状態）の &lt;T&gt に変更する。</li>
+<li>上記方程式（非線形連立）を解くことで、 時間微分変数 <a href="#DERIVATIVE">&lt;DR&gt;</a> をゼロにする &lt;I&gt; 変数を直接計算します。</li>
+</ol>
+参照: <a href="#DdsCompileGraph">DdsCompileGraph(p,DDS_STEADY_STATE)</a>
+</blockquote>
+<a name="VOLATILE"/>
+<table border="1" width="100%">
+<col width="75%">
+<tr><td><b>DDS_FLAG_VOLATILE (&lt;V&gt;)</b></td><td>0x00000010</td></tr></table>
+&lt;V&gt; フラグは &lt;S&gt; または &lt;T&gt; 変数にのみ付与することが出来ます。<br/>
+&lt;V&gt; は値が不確定（時間依存）であり、DDSL は値を管理できないことを意味します。値を管理するのはユーザー自身。<p/>
+
+<a name="TRIANGULAR" />
+<h3>ブロック三角分解</h3>
 <table border="1" width="100%">
 <col width="30%">
 <tr><td>
 <img src="./block.png">
 </td><td>
-
-
+非線形連立方程式(y=f(x) ==&gt;0.0)を Newton 法で解く場合は Jacobian 行列（一次微分行列）を計算する必要があります。<blockquote>
+y(x+dx) = y(x)+J*dx ==&gt; 0.0 ,  <br/>
+よって dx = -J<sup>-1</sup>*y(x),
+</blockquote>
+ここで J は Jacobian 行列(=dy/dx), y,x,そして dx はベクトル,さらに x+dx は繰り返し計算の次の近似値。<br/>
+J や J<sup>-1</sup> の計算は時に大規模になり得ます。<br/>
+DDSL は、可能なら、J をより小さいサイズの連続した行列に分解（<b>ブロック三角分解</b>）します。
+<br/>
+左図では 大きな J を計算せず (1)、(2)、そして (3) の順に（行と列を入れ換えることで）計算することが出来ます。<br>
+<b>※:</b>DDSL は数値微分機能を実装しているので Jacobian 行列用の計算式を用意する必要はありません。<br/>
 </td></tr>
 </table>
 
-<hr/>
+<a name="SFLAG" />
+<h3>システムフラグ:</h3>
+<table width="100%"><tr><td>
+<a href="#ALIVE">DDS_SFLAG_ALIVE</a></td><td><a href="#FREE">DDS_SFLAG_FREE</a></td><td><a href="#DIVIDED">DDS_SFLAG_DIVIDED</a></td><td><a href="#DERIVATIVE">DDS_SFLAG_DERIVATIVE</a></td></tr><tr><td><a href="#ERROR">DDS_SFLAG_ERROR</a></td><td><a href="#ONCE">DDS_COMPUTED_ONCE</a></td><td><a href="#EVERY_TIME">DDS_COMPUTED_EVERY_TIME</a></td><td><a href="#ANY_TIME">DDS_COMPUTED_ANY_TIME</a>
+</td></tr></table>
+<p/>
+DDSL はユーザーフラグをチェックして、それが正しければユーザーフラグをシステムフラグ領域にコピーします。
+その後、処理に応じてシステムフラグ領域には各種のフラグが追加・変更・削除されます。
+以下、代表的なシステムフラグの説明です。<p/>
+<a name="ALIVE"/>
+<table border="1" width="100%">
+<col width="75%">
+<tr><th align="left">システムフラグ (記法)</th><th align="left">値</th>
+<tr><td><b>DDS_SFLAG_ALIVE (&lt;AL&gt;)</b></td><td>0x00001000</td></tr></table>
+直接・間接的に<a href="#REQUIRED">&lt;R&gt;</a>変数の計算に寄与する変数にこのフラグ（&lt;AL&gt;）が付与されます。
+<br/>
+また、 &lt;AL&gt; ではない変数（&lt;R&gt;変数の計算に全く寄与しない変数）は計算から除外されます。
+<p/>
+<a name="FREE"/>
+<table border="1" width="100%">
+<col width="75%">
+<tr><td><b>DDS_SFLAG_FREE (&lt;F&gt;)</b></td><td>0x00002000</td></tr></table>
+DDSL は右辺変数（RHSV）を持たず&lt;S&gt;でもない変数を見つけ、&lt;F&gt; フラグを付与します。<br/>
+&lt;F&gt; 変数は自由に値を変更できるので、その値を決定するためには、方程式（通常非線形連立）を解く必要があります。
+つまり、予め設定された値になる必要のある従属変数（<a href="#TARGETED">&lt;T&gt;</a>）が下流に存在する必要があります。
+<p/>
+<b>連立方程式の解の存在条件：</b>
+<ul>
+<li>同一連結成分中の &lt;F&gt; と &lt;T&gt; 変数の数は一致する必要がある。</li>
+<li>&lt;F&gt; から &lt;T&gt; への独立したルートが存在する必要がある（ルート別に &lt;F&gt; と &lt;T&gt; は一対一対応が必要）。</li>
+</ul>
+<p/>
+<a name="DIVIDED"/>
+<table border="1" width="100%">
+<col width="75%">
+<tr><td><b>DDS_SFLAG_DIVIDED (&lt;DD&gt;)</b></td><td>0x00004000</td></tr></table>
+<a href="#DIVISIBLE">DDSL はループを検出してループ上の１変数を分割します</a>。 <br/>
+分割の結果、一個の変数が自動的に作成・追加されます。<br/>
+分割前の変数は、そのまま &lt;F&gt; に変更されます。新規に作成された変数は &lt;T&gt; になります。
+どちらも、同時に &lt;DD&gt; 変数となります。
+<p/>
+<a name="DERIVATIVE"/>
+<table border="1" width="100%">
+<col width="75%">
+<tr><td><b>DDS_SFLAG_DERIVATIVE (&lt;DR&gt;)</b></td><td>0x00008000</td></tr></table>
+&lt;DR&gt;は&lt;I&gt;変数の右辺変数です。　つまり、 &lt;I&gt; 変数の微分変数となり。
+<a href="#INTEGRATED">定常状態計算</a>では値 0.0 の&lt;T&gt; 変数に変更されます（同時に &lt;I&gt; 変数は &lt;F&gt; に変更されます）。
+<p/>
+<a name="ERROR"/>
+<table border="1" width="100%">
+<col width="75%">
+<tr><td><b>DDS_SFLAG_ERROR (&lt;ER&gt;)</b></td><td>0x00010000</td></tr></table>
+ユーザフラグの組み合わせなどにエラーがあった場合、エラーのあった変数にこのフラグがセットされます。
+<p/> 
+<a name="ONCE"/>
+<table border="1" width="100%">
+<col width="75%">
+<tr><td><b>DDS_COMPUTED_ONCE (&lt;1T&gt;)</b></td><td>0x00020000</td></tr></table>
+最初に一度だけ計算される変数に設定されるフラグです。<br/>
+つまり、直接・間接的に（<a href="#VOLATILE">&lt;V&gt;</a>ではない）&lt;S&gt; や &lt;T&gt; だけから計算される変数です。<br/>
+&lt;1T&gt; 変数の値は一度計算されたら以後変更されることはありません。
+<br/>
+<b>※:</b> 参照：<a href="#DdsGetVariableSequence">DdsGetVariableSequence()</a>
+<p/>
+<a name="EVERY_TIME"/>
+<table border="1" width="100%">
+<col width="75%">
+<tr><td><b>DDS_COMPUTED_EVERY_TIME (&lt;ET&gt;)</b></td><td>0x00040000</td></tr></table>
+&lt;ET&gt; 変数は &lt;I&gt; から &lt;DR&gt; に至るルート上にある変数で、積分計算毎に毎回計算される変数です。
+<br/>
+<b>※:</b> 参照：<a href="#DdsGetVariableSequence">DdsGetVariableSequence()</a>
+<p/>
+<a name="ANY_TIME"/>
+<table border="1" width="100%">
+<col width="75%">
+<tr><td><b>DDS_COMPUTED_ANY_TIME (&lt;AT&gt;)</b></td><td>0x00080000</td></tr></table>
+&lt;AT&gt; 変数は積分計算には含まれない（&lt;ET&gt; 変数ではない）が時間依存である変数にセットされます。<br/>
+&lt;AT&gt; 変数の値が必要な場合は、<a href="#DdsComputeStatic">DdsComputeStatic()</a> を <a href="#DdsComputeDynamic">DdsComputeDynamic()</a>後に呼び出す必要があります。<br/>
+<b>※:</b> 参照：<a href="#DdsGetVariableSequence">DdsGetVariableSequence()</a>
+<p/>
 
+<a name="API_REF" />
+<h2>関数一覧</h2>
+<table width="100%">
+<tr><th>プロセッサー基本関数</th><th>変数基本関数</th><th>補助関数</th><th>低レベル関数</th></tr><tr>
+<td>
+<a href="#DdsCreateProcessor">DdsCreateProcessor</a><br/>
+<a href="#DdsDeleteProcessor">DdsDeleteProcessor</a><br/>
+<a href="#DdsAddVariableV">DdsAddVariableV</a><br/>
+<a href="#DdsAddVariableA">DdsAddVariableA</a><br/>
+<a href="#DdsCompileGraph">DdsCompileGraph</a><br/>
+<a href="#DdsComputeStatic">DdsComputeStatic</a><br/>
+<a href="#DdsComputeDynamic">DdsComputeDynamic</a><br/>
+<a href="#DdsGetVariables">DdsGetVariables</a><br/>
+<a href="#DdsTime">DdsTime</a><br/>
+<a href="#DdsStep">DdsStep</a><br/>
+<a href="#DdsGetVariableSequence">DdsGetVariableSequence</a><br/>
+</td><td>
+<a href="#DdsGetVariableName">DdsGetVariableName</a><br/>
+<a href="#DdsGetValue">DdsGetValue</a><br/>
+<a href="#DdsSetValue">DdsSetValue</a><br/>
+<a href="#DdsGetRhsvs">DdsGetRhsvs</a><br/>
+<a href="#DdsSetRHSV">DdsSetRHSV</a><br/>
+<a href="#DdsGetRHSV">DdsGetRHSV</a><br/>
+<a href="#DdsGetUserFlag">DdsGetUserFlag</a><br/>
+<a href="#DdsSetUserFlag">DdsSetUserFlag</a><br/>
+<a href="#DdsGetSystemFlag">DdsGetSystemFlag</a><br/>
+<a href="#DdsSetUserFlagOn"> DdsSetUserFlagOn</a><br/>
+<a href="#DdsSetUserFlagOff">DdsSetUserFlagOff</a><br/>
+</td><td>
+<a href="#DdsGetEPS">DdsGetEPS</a><br/>
+<a href="#DdsSetEPS">DdsSetEPS</a><br/>
+<a href="#DdsGetMaxIterations">DdsGetMaxIterations</a><br/>
+<a href="#DdsSetMaxIterations">DdsSetMaxIterations</a><br/>
+<a href="#DdsGetProcessorUserPTR">DdsGetProcessorUserPTR</a><br/>
+<a href="#DdsSetProcessorUserPTR">DdsSetProcessorUserPTR</a><br/>
+<a href="#DdsGetVariableUserPTR">DdsGetVariableUserPTR</a><br/>
+<a href="#DdsSetVariableUserPTR">DdsSetVariableUserPTR</a><br/>
+<a href="#DdsCheckVariable">DdsCheckVariable</a><br/>
+<a href="#DdsDbgPrintF">DdsDbgPrintF</a><br/>
+</td><td>
+<a href="#DdsGetVariableNext">DdsGetVariableNext</a><br/>
+<a href="#DdsGetVariableIndex">DdsGetVariableIndex</a><br/>
+<a href="#DdsGetVariableScore">DdsGetVariableScore</a><br/>
+<a href="#DdsSieveVariable">DdsSieveVariable</a><br/>
+<a href="#DdsDivideLoop">DdsDivideLoop</a><br/>
+<a href="#DdsCheckRouteFT">DdsCheckRouteFT</a><br/>
+<a href="#DdsBuildSequence">DdsBuildSequence</a><br/>
+</td></tr>
+</table>
+
+<p/>
+<a name="DdsCreateProcessor"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><th>戻り値</th><th>関数名(引数...)</th></tr>
+<tr><td>int</td><td>DdsCreateProcessor(DDS_PROCESSOR* p, int nv)</td></tr>
+</table>
+DdsCreateProcessor() は DDS_PROCESSOR (本体は struct で ddsl.h で定義) のメモリーを確保して、そのポインターを第１引数のプロセッサー <b>p</b> にセットします。<br/>
+第２引数 <b>nv</b> は <b>p</b> が最初に保持できる変数の最大値です。ただし、この値は必要に応じて自動的に拡大されます。<br/>
+<b>※: 戻り値 0 は正常終了。ゼロ以外はエラーコード</b>。　各エラーコードの値は ddsl.h を参照。
+<p/>
+
+<a name="DdsDeleteProcessor"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>void</td><td>DdsDeleteProcessor(DDS_PROCESSOR* p)</td></tr>
+</table>
+DdsDeleteProcessor() は確保したメモリーを全て解法し、さらに p 自身の領域も解放してから p にNULLを設定します。
+<p/>
+<a name="DdsAddVariableV"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>int</td><td>DdsAddVariableV(DDS_PROCESSOR p,DDS_VARIABLE *pv,const char *name,unsigned int f,double val, ComputeVal func,int nr,...)</td></tr>
+</table>
+DdsAddVariableV() は DDS_VARIABLE(本体は struct で ddsl.h で定義) のメモリーを確保してから、そのポインターを <b>pv</b> にセットします。<br/>
+さらに作成した変数をプロセッサー <b>p</b> に登録します。<p/>
+<b>[引数の説明]</b>
+<ul>
+<li> p  ... 予め作成された、全変数を管理するための DDS_PROCESSOR(<a href="#DdsCreateProcessor">DdsCreateProcessor()</a>) 。</li>
+<li> pv ... 新しく作成された DDS_VARIABLE を受け取るための変数（ポインター）。</li>
+<li> name ... 新規作成される変数 pv の名前。</li>
+<li> f ... pv の<a href="#FLAG">フラグ</a>。</li>
+<li> val ... pv の値（初期値）。</li>
+<li> func ... pv の値を計算する関数（ポインター、ddsl.h 参照)。</li>
+<li> nr,... pv の右辺変数の個数（ 0 可）。以後は nr 個の右辺変数の並び（nr 個の可変引数）。</li>
+<li> ...、...  nr 個の右辺変数の並び（nr 個の可変引数）。</li>
+</ul>
+<b>※:</b> 最後の nr 個の右辺変数はこの時点では何でも構いません(NULL可)。<br/>
+<b>※: 戻り値 0 は正常終了。ゼロ以外はエラーコード</b>。　各エラーコードの値は ddsl.h を参照。
+<p/>
+
+<p/>
+<a name="DdsAddVariableA"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>int</td><td>DdsAddVariableA(DDS_PROCESSOR p, DDS_VARIABLE* pv, const char* name, unsigned int f, double val, ComputeVal func, int nr, DDS_VARIABLE** rhsvs)</td></tr>
+</table>
+DdsAddVariableA() は最後の右辺変数指定が nr 個の要素を持つ変数配列である以外は <a href="#DdsAddVariableV">DdsAddVariableV()</a> と同じです。<br/>
+<b>※: 戻り値 0 は正常終了。ゼロ以外はエラーコード</b>。　各エラーコードの値は ddsl.h を参照。
+<p/>
+
+<a name="DdsCompileGraph"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>int</td><td>DdsCompileGraph(DDS_PROCESSOR p,int method)</td></tr>
+</table>
+DdsCompileGraph() は以下の（低レベル）関数を順に呼び出し、計算前の全てを準備します。
+<ol>
+<li><a href="#DdsSieveVariable">DdsSieveVariable(p)</a>... ユーザ-フラグを、チェック後、システムフラグにコピー。さらに <a href="#ALIVE">&lt;AL&gt;</a> を選別します。</li>
+<li><a href="#DdsDivideLoop">DdsDivideLoop(p)</a>... ループを検出後、<a href="#DIVISIBLE">&lt;DD&gt;</a>変数を分割します。</li>
+<li><a href="#DdsCheckRouteFT">DdsCheckRouteFT(p)</a>...は <a href="#TARGETED">&lt;F&gt; と &lt;T&gt; の 1 対 1 ルート対応</a>、を確認後 <a href="#TRIANGULAR">ブロック三角化分解</a>を実行します。</li>
+<li><a href="#DdsBuildSequence">DdsBuildSequence(p)</a>... 各変数の計算順序を決定します。</li>
+</ol>
+DdsCompileGraph() は計算順序決定の際に全ての変数を以下の 3 つのグループに分類します(<a href="#DdsBuildSequence">DdsBuildSequence(p)</a>)。
+<ul>
+<li><a href="#ONCE">DDS_COMPUTED_ONCE (&lt;1T&gt;)</a>: 一度しか計算されない変数（直接・間接的に &lt;S&gt; や &lt;T&gt; だけから計算される変数）。</li>
+<li><a href="#EVERY_TIME">DDS_COMPUTED_EVERY_TIME (&lt;ET&gt;)</a>: 各積分刻み毎に毎回計算される変数。つまり、 &lt;I&gt; から &lt;DR&gt; までのルート上に存在する変数。</li>
+<li><a href="#EVERY_TIME">DDS_COMPUTED_ANY_TIME (&lt;AT&gt;)</a>: 時間依存ではあるものの &lt;ET&gt; ではない変数。</ul>
+
+引数は 0(デフォルト:DDS_I_RUNGE_KUTTA)、または以下の一つ:
+<ul>
+<li>DDS_I_EULER or DDS_I_RUNGE_KUTTA  ... Euler または Runge-Kutta 方を積分に使用する場合(次に DdsComputeDynamic(p) を呼び出す必要があります)。</li>
+<li>DDS_I_BW_EULER  ... 積分に Backward Euler 方を用いる場合(次に DdsComputeDynamic(p) を呼び出す必要があります)。</li>
+<li>DDS_STEADY_STATE ... 定常状態を求める場合(次に DdsComputeStatic(p) を呼びます)。</li>
+</ul>
+計算順序は上記３種類の指定に従って変化します。<br/>
+<b>※: 戻り値 0 は正常終了。ゼロ以外はエラーコード</b>。　各エラーコードの値は ddsl.h を参照。
+<p/>
+
+<a name="DdsComputeStatic"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>int</td><td>DdsComputeStatic(DDS_PROCESSOR p)</td></tr>
+</table>
+DdsComputeStatic() は特定時間平面上の変数値を計算します。変数値計算に非線形連立方程式が含まれていれば Newton 方で解きます。
+<br/>
+<b>※: 戻り値 0 は正常終了。ゼロ以外はエラーコード</b>。　各エラーコードの値は ddsl.h を参照。
+<p/>
+
+<a name="DdsComputeDynamic"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>int</td><td>DdsComputeDynamic(DDS_PROCESSOR p,int method)</td></tr>
+</table>
+DdsComputeDynamic() は常微分方程式の <b>1 ステップ</b> 分を計算します（時間を１ステップ 分進めます）。<br/>
+計算は以下の順に実行されます:
+<ol>
+<li>最初に必要なら DdsComputeStatic() を呼び出し、時間 t(=<a href="#DdsTime">current time</a>) の時の全変数値を計算します。</li>
+<li>次に、例えば <a href="#INTEGRATED">&lt;I&gt;</a> を y(t) とすると dt 時間後の値 y(t+dt) を常微分方程式を解くことで計算します。t は <a href="#DdsTime">現在時刻</a>、 dt は <a href="#DdsStep">積分時間刻み</a>です。</li>
+<li>さらに現在時刻を t + dt として、変化した y(t+dt) に影響される全変数を <a href="#DdsComputeStatic">DdsComputeStatic()</a> を呼び出すことで計算します（参照：<a href="#DdsGetVariableSequence">DdsGetVariableSequence(p,DDS_COMPUTED_EVERY_TIME)</a>）。</li>
+</ol>
+<b>method</b> は 0(デフォルト)、または DDS_I_EULER か DDS_I_RUNGE_KUTTA を指定します。<blockquote>
+DDS_I_EULER または DDS_I_RUNGE_KUTTA は、 <a href="#DdsCompileGraph">DdsCompileGraph()</a> にどちらかを指定した場合のみ可能です（ DDS_I_EULER と DDS_I_RUNGE_KUTTA は相互に交換可能です）。
+</blockquote>
+<b>※:</b> <a href="#DdsTime">時間(t)</a> は自動的に <a href="#DdsStep">時間刻み</a> （予め設定されている必要があります）分更新されます。
+<br/>
+<b>※: 戻り値 0 は正常終了。ゼロ以外はエラーコード</b>。　各エラーコードの値は ddsl.h を参照。
+<p/>
+
+<a name="DdsTime"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>DDS_VARIABLE</td><td>DdsTime(DDS_PROCESSOR p)</td></tr>
+</table>
+DdsTime() は組み込みの時間変数（名前は "#TIME" ）を返します。<br/>
+時間の初期値は 0.0、 <a href="#DdsComputeDynamic">DdsComputeDynamic()</a> によって１時間刻み分進められます。
+<p/>
+<a name="DdsStep"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>DDS_VARIABLE</td><td>DdsStep(DDS_PROCESSOR p)</td></tr>
+</table>
+DdsStep() は組み込みの時間刻み変数（名前は "#STEP" ）を返します。<br/>
+初期値は 0.0 です。従って時間を進めるには、<a href="#DdsComputeDynamic">DdsComputeDynamic()</a>を呼び出す前に、適切な値を設定する必要があります(参照： <a href="#DdsSetValue">DdsSetValue()</a>)。
+<p/>
+<a name="DdsGetUserFlag"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>unsigned int</td><td>DdsGetUserFlag(DDS_VARIABLE v)</td></tr>
+</table>
+DdsGetUserFlag() はすべての<a href="#FLAG">ユーザーフラグ（３２-ビット）</a>を返します。
+<p/>
+<a name="DdsSetUserFlag"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>unsigned int</td><td>DdsSetUserFlag(DDS_VARIABLE v,unsigned int f)</td></tr>
+</table>
+DdsSetUserFlag() はすべての<a href="#FLAG">ユーザーフラグ（３２-ビット）</a>を指定した f と置き換えて、 f を返します。
+<p/>
+
+<a name="DdsGetSystemFlag"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>unsigned int</td><td>DdsGetSystemFlag(DDS_VARIABLE v)</td></tr>
+</table>
+DdsGetSystemFlag() はすべての<a href="#SFLAG">システムフラグ（３２-ビット）</a>を返します。
+<p/>
+
+<a name="DdsSetUserFlagOn"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>unsigned int</td><td>DdsSetUserFlagOn(DDS_VARIABLE v, unsigned int f)</td></tr>
+</table>
+DdsSetUserFlagOn() は以下の様にユーザーフラグ（F）を、指定された f のオン(1)になっている部分のみを 1 に設定します。戻り値は結果の F となります。<br/>
+<b>F |= f</b><br/>
+<p/>
+
+<a name="DdsSetUserFlagOff"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>unsigned int</td><td>DdsSetUserFlagOff(DDS_VARIABLE v, unsigned int f)</td></tr></table>
+DdsSetUserFlagOff()  は以下の様にユーザーフラグ（F）を、指定された f のオン(1)になっている部分のみを 0 に設定します。戻り値は結果の F となります。<br/>
+  <b>F &= <sup>~</sup>(f)</b><br/>
+<p/>
+
+<a name="DdsGetVariables"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>DDS_VARIABLE*</td><td>DdsGetVariables(int* nv, DDS_PROCESSOR p)</td></tr>
+</table>
+DdsGetVariables() はプロセッサー p に登録された変数配列を返します。
+nv は配列のサイズがセットされます。<br/>
+<p>
+
+<a name="DdsGetVariableUserPTR"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>void*</td><td>DdsGetVariableUserPTR(DDS_VARIABLE v)</td></tr>
+</table>
+DdsGetVariableUserPTR() は変数 v に登録されているユーザーポインター（任意）を返します。
+ユーザーポインターの使用方法はユーザー次第です。DDS がこのポインターを参照することはありません。
+<br/>
+<p/>
+
+<a name="DdsSetVariableUserPTR"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>void</td><td>DdsSetVariableUserPTR(DDS_VARIABLE v, void* val)</td></tr>
+</table>
+DdsSetVariableUserPTR() はユーザーポインター（任意）val を変数 v に登録ます。
+ユーザーポインターの使用方法はユーザー次第です。DDS がこのポインターを参照することはありません。
+<br/>
+<p/>
+<a name="DdsGetVariableName"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>const char*</td><td>DdsGetVariableName(DDS_VARIABLE v)</td></tr>
+</table>
+DdsGetVariableName() は変数 v の名前を返します。
+<br/>
+<p/>
+
+<a name="DdsGetValue"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>double</td><td>DdsGetValue(DDS_VARIABLE v)</td></tr>
+</table>
+DdsGetValue() は変数 y の値を返します。
+<br/>
+<p/>
+<a name="DdsSetValue"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>double</td><td>DdsSetValue(DDS_VARIABLE v,double val)</td></tr>
+</table>
+DdsSetValue() は変数 y の値を val に設定します。
+<br/>
+<p/>
+
+<a name="DdsGetRhsvs"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>DDS_VARIABLE*</td><td>DdsGetRhsvs(int* nr, DDS_VARIABLE v)</td></tr>
+</table>
+DdsGetRhsvs() は変数 v の右辺変数（RHSV）配列を返します。
+nr には右辺変数の数（配列サイズ）がセットされます。<br/>
+<p/>
+<a name="DdsSetRHSV"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>int</td><td>DdsSetRHSV(DDS_VARIABLE v, int i, DDS_VARIABLE rv)</td></tr>
+</table>
+DdsSetRHSV() は変数 v の右辺変数配列の i 番目の要素を rv に置き換えます。
+<br/>
+<p/>
+<a name="DdsGetRHSV"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>DDS_VARIABLE</td><td>DdsGetRHSV(DDS_VARIABLE v, int i)</td></tr>
+</table>
+DdsGetRHSV() は変数 v の右辺変数配列の i 番目の要素を返します。
+<br/>
+<p/>
+<a name="DdsGetVariableSequence"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>DDS_VARIABLE</td><td>DdsGetVariableSequence(DDS_PROCESSOR p, unsigned int seq)</td></tr>
+</table>
+DDS は <a href="#DdsCompileGraph">DdsCompileGraph()</a> で各変数の計算順序を決定します。<br/>
+DDS(<a href="#DdsCompileGraph">DdsCompileGraph()</a>) はさらに計算される変数を以下の３グループに分割します。
+各グループは先頭から最終まで計算順序に従ったリンクリストで繋がっています（最終変数の次は NULL となります）。
+<ol>
+<li><a href="#ONCE">DDS_COMPUTED_ONCE</a> ... 最初に<b>一度計算</b>しか計算されない変数グループです。</li>
+<li><a href="#EVERY_TIME">DDS_COMPUTED_EVERY_TIME</a> ... 各積分ステップ毎、毎回計算される変数グループです。</li>
+
+<li><a href="#ANY_TIME">DDS_COMPUTED_ANY_TIME</a> ... 時間に依存しているものの<a href="#DdsComputeDynamic">DdsComputeDynamic()</a>呼び出し後に、必要なら <a href="#DdsComputeStatic">DdsComputeStatic()</a> 呼び出しで計算される変数グループです。</li>
+</ol>
+
+上記変数は以下の様に列挙できます（引数 seq は上記３グループの一つを指定します）:
+<pre><code>
+  DDS_VARIABLE v = DdsGetVariableSequence(p,DDS_COMPUTED_ONCE);
+  /* The order of variables computed at DDS_COMPUTED_ONCE */
+  while(v != NULL) {
+     printf(" Name=%s\n",DdsGetVariableName(v);
+     v = DdsGetVariableNext(v);
+  }
+</code></pre> 
+
+<a name="DdsGetEPS"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>double</td><td>DdsGetEPS(DDS_PROCESSOR p)</td></tr>
+</table>
+DdsGetEPS() は非線形連立方程式の収束判定定数を返します。
+<p/>
+<a name="DdsSetEPS"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>double</td><td>DdsSetEPS(DDS_PROCESSOR p, double eps)</td></tr>
+</table>
+DdsSetEPS() は非線形連立方程式の収束判定定数(eps)を設定します。
+<p/>
+
+<a name="DdsGetMaxIterations"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>int</td><td>DdsGetMaxIterations(DDS_PROCESSOR p)</td></tr>
+</table>
+DdsGetMaxIterations() は非線形連立方程式の最大繰返し回数を返します。
+<p/>
+
+<a name="DdsSetMaxIterations"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>int</td><td>DdsSetMaxIterations(DDS_PROCESSOR p, int max)</td></tr>
+</table>
+DdsSetMaxIterations() は非線形連立方程式の最大繰返し回数を max に設定します。
+<p/>
+<a name="DdsGetProcessorUserPTR"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>void*</td><td>DdsGetProcessorUserPTR(DDS_PROCESSOR p)</td></tr>
+</table>
+DdsGetProcessorUserPTR() はプロセッサーに登録されたユーザーポインター（任意）を返します。
+ユーザーポインターの使用方法はユーザー次第です。DDS がこのポインターを参照することはありません。
+<p/>
+<a name="DdsSetProcessorUserPTR"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>void</td><td>DdsSetProcessorUserPTR(DDS_PROCESSOR p,void* val)</td></tr>
+</table>
+DdsSetProcessorUserPTR() はユーザーポインター（任意）val をプロセッサー p に登録ます。
+ユーザーポインターの使用方法はユーザー次第です。DDS がこのポインターを参照することはありません。
+<p/>
+
+<a name="DdsCheckVariable"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>int</td><td>DdsCheckVariable(DDS_PROCESSOR p, DDS_VARIABLE hv)</td></tr>
+</table>
+DdsCheckVariable() はプロセッサー p に登録された変数のユーザーフラグ等をチェックします。<br/>
+もし、何らかのエラーが検出されればゼロ以外の値を返すとともに、エラーのあった変数のシステムフラグには<a href="#SFLAG_ERROR">DDS_SFLAG_ERROR</a> が設定されます。<br/>
+<p/>
+<a name="DdsDbgPrintF"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>void</td><td>DdsDbgPrintF(FILE* f, const char* title, DDS_PROCESSOR p)</td></tr>
+</table>
+DdsDbgPrintF() は全変数の情報を title と共に FILE* f に出力します。
+出力情報などの詳細は ddsl.cpp を参照してください。
+<p/>
+<a name="DdsGetVariableNext"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>DDS_VARIABLE</td><td>DdsGetVariableNext(DDS_VARIABLE v)</td></tr>
+</table>
+DdsGetVariableNext() は各変数が内部に保有するリンク（処理段階に応じて変化します）'NEXT' を返します。<br/>
+詳細は ddsl.cpp を参照してください。<br/>
+<p/>
+<a name="DdsGetVariableIndex"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>int</td><td>DdsGetVariableIndex(DDS_VARIABLE v)</td></tr>
+</table>
+DdsGetVariableIndex() は各変数が内部に保有するインデックス（処理段階に応じて変化します）'INDEX' を返します。<br/>詳細は ddsl.cpp を参照してください。<br/>
+<p/>
+
+<a name="DdsGetVariableScore"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>int</td><td>DdsGetVariableScore(DDS_VARIABLE v)</td></tr>
+</table>
+DdsGetVariableScore() は各変数が内部に保有するスコアー（処理段階に応じて変化します）'SCORE' を返します。<br/>
+詳細は ddsl.cpp を参照してください。<br/>
+<p/>
+<a name="DdsSieveVariable"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>int</td><td>DdsSieveVariable(DDS_PROCESSOR p)</td></tr>
+</table>
+低レベル関数、詳細は <A href="#DdsCompileGraph">DdsCompileGraph()</a> のソースコードを参照してください。
+<p/>
+<a name="DdsDivideLoop"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>int</td><td>DdsDivideLoop(DDS_PROCESSOR p)</td></tr>
+</table>
+低レベル関数、詳細は <A href="#DdsCompileGraph">DdsCompileGraph()</a> のソースコードを参照してください。
+<p/>
+
+<a name="DdsCheckRouteFT"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>int</td><td>DdsCheckRouteFT(DDS_PROCESSOR p)</td></tr>
+</table>
+低レベル関数、詳細は <A href="#DdsCompileGraph">DdsCompileGraph()</a> のソースコードを参照してください。
+<p/>
+
+<a name="DdsBuildSequence"/>
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>int</td><td>DdsBuildSequence(DDS_PROCESSOR p)</td></tr>
+</table>
+低レベル関数、詳細は <A href="#DdsCompileGraph">DdsCompileGraph()</a> のソースコードを参照してください。
+<p/>
+
+<hr/>
 <a name="REF"/>
-<h2>References:</h2>
+<h2>参照論文等:</h2>
 <ul>
 <li>Masao Iri, Junkichi Tsunekawa, Keiji Yajima:The Graphical Techniques Used for a Chemical Process Simulator "JUSE GIFS". IFIP Congress. </li>
 <li>Dr. Kazuo Murota (auth.):Systems Analysis by Graphs and Matroids: Structural Solvability and Controllability
@@ -283,8 +943,12 @@ Integration specification. &lt;I&gt; variable's value is computed by integration
 </ul>
 
 <div align="right">
-Shigeo Kobayashi 2021-6-10
+小林 茂雄 2021-6-10
 </div>
+<hr/>
+<font size="2">
+このソフトウェアを偉大なお二人（故人）に捧げます。天才プログラマー、かつての上司、恒川順吉氏と大数学者の伊理正雄先生。そしてこのソフトウェアは私が、短い期間でしたが、お二人と共に仕事が出来た栄誉の証明でもあります。
+</font>
 <hr/>
 </body>
 </html>

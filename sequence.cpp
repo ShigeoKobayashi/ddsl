@@ -124,7 +124,7 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 		if (IS_INTEGRATED(pv)) {
 			// <I>
 			SET_SFLAG_ON(pv, DDS_FLAG_VOLATILE| DDS_COMPUTED_EVERY_TIME);       // Set <I> be volatile.
-			SET_SFLAG_ON(RHSV(pv, 0), DDS_SFLAG_DERIVATIVE| DDS_FLAG_VOLATILE); // <DE> also volatile.
+			SET_SFLAG_ON(RHSV(pv, 0), DDS_SFLAG_DERIVATIVE| DDS_FLAG_VOLATILE); // <DR> also volatile.
 			IV(ni++) = pv;
 		}
 		if (IS_VOLATILE(pv)) {
@@ -194,12 +194,12 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 			}
 		}
 		// 
-		// Back track from <DE> to <V>(including <I>) and set DDS_COMPUTED_EVERY_TIME to the variables on the route.
+		// Back track from <DR> to <V>(including <I>) and set DDS_COMPUTED_EVERY_TIME to the variables on the route.
 		for (int i = 0; i < I_COUNT(); ++i) {
 			DdsVariable* pv = RHSV(IV(i), 0);
 			STACK_CLEAR();
 			PUSH(nullptr);
-			PUSH(pv); // pv==<DE>
+			PUSH(pv); // pv==<DR>
 			ENABLE_BACKTRACK(DDS_FLAG_SET | DDS_SFLAG_FREE | I_BACKTRACK());
 			while ((pv = PEEK()) != nullptr) {
 				if (IS_VOLATILE(pv)) {
