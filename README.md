@@ -1,4 +1,6 @@
 # ddsl
+[DDSL(Digital Dynamic Simulation Library for C/C++,based on Graph Theory)](http://www.tinyforest.jp/oss/ddsl_en.html)
+
 DDSL(Digital Dynamic Simulation Library for C/C++,based on Graph Theory) is the library to assist numerical simulation for dynamics and statics.
 DDSL implements Newton-method for solving non-linear algebraic eqution systems for static simulation and Euler,Backward Euler,and Runge-Kutta methods for solving ordinary differential equation systems for dynamic simulation.The users,although,need not use these methos directly with the assistance of Graph-theory.DDSL automaticaly determines computation sequence,constructs non-linear equation and ordinary differential equation systems if necessary,and solve them.
 
