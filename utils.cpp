@@ -3,7 +3,7 @@
  * Utility routines.
  *  (Memory allocation,Exception handling).
  *
- *  Copyright(C) 2020 by Shigeo Kobayashi(shigeo@tinyforest.jp).
+ *  Copyright(C) 2021 by Shigeo Kobayashi(shigeo@tinyforest.jp).
  *
  */
 
@@ -17,25 +17,25 @@
 using namespace std;
 static int g_alloc_count = 0;
 
-void* MemAlloc(int s)
+void* MemAlloc(DdsProcessor *p,int s)
 {
-	void* p = calloc(s, sizeof(char));
-	if (p == nullptr) THROW(DDS_ERROR_MEMORY, DDS_MSG_MEMORY);
+	void* pv = calloc(s, sizeof(char));
+	if (pv == nullptr) THROW(DDS_ERROR_MEMORY, DDS_MSG_MEMORY);
 	g_alloc_count++;
-	return p;
+	return pv;
 }
 
-void* MemRealloc(void* p, int s)
+void* MemRealloc(DdsProcessor *p,void* pv, int s)
 {
-	void* t = realloc(p, s);
+	void* t = realloc(pv, s);
 	if (t == nullptr) {
-		free(p);
+		free(pv);
 		THROW(DDS_ERROR_MEMORY, DDS_MSG_MEMORY);
 	}
 	return t;
 }
 
-void MemFree(void** pp) 
+void MemFree(DdsProcessor *p,void** pp) 
 {
 	if ( pp == nullptr) return;
 	if (*pp == nullptr) return;

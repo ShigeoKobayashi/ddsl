@@ -1,17 +1,19 @@
 /*
  *
  * DDSL: Digital Dynamic Simulation Library (C/C++ Library).
- *
- * Copyright(C) 2020 by Shigeo Kobayashi(shigeo@tinyforest.jp).
+ *       Copyright(C) 2021 by Shigeo Kobayashi(shigeo@tinyforest.jp).
  *
  */
 
 #ifndef  __DDSL_H
 #define  __DDSL_H 1
 /*
- * Platform definition: BIT32,BIT64,WINDOWS,and LINUX.
- *   Folowing macros define BIT32,BIT64 and WINDOWS for Windows(VC),and LINUX for Linux(gcc).
- *   Other platforms(compilers) are not yet implemented.
+ * Platform definition:
+ *   WINDOWS or LINUX for Windows(VC) or Linux(gcc).
+ *   EXPORT           for API exportation.
+ *   BIT32   or BIT64 for 32-bit or 64-bit platform.
+ * 
+ *  Other platforms(Windows or Linux compilers) are not yet implemented.
  * 
  */
 #ifdef _WIN32
@@ -41,93 +43,90 @@ extern "C" {
 #endif
 
 /* Function pointer to compute(and return) variable's value. */
-/* Note:'void* p' == DDS_PROCESSOR, 'void* v===DDS_VARIABLE  */
-typedef double (*ComputeVal)(void* p, void* v);
+struct PROCESSOR;
+struct VARIABLE;
+typedef double (*ComputeVal)(struct PROCESSOR* p, struct VARIABLE* v);
+typedef void   (*ErrHandler)(struct PROCESSOR* p);
 
 /*
  * DDSL inner structure (Direct access is not safe.)
  */
-#ifdef __cplusplus
 typedef struct VARIABLE {
-#else
-typedef struct {
-#endif
-	void*        UserPTR; /* just for user(DDSL never touch) */
-	char*        Name;
-	ComputeVal   Function;
-	double       Value;
-#ifdef __cplusplus
-	VARIABLE**   Rhsvs;
-#else
-	void**       Rhsvs;
-#endif
-	unsigned int UFlag;
-	unsigned int SFlag;
-	int          Nr;
-#ifdef __cplusplus
-	VARIABLE* next;
-#else
-	void* next;
-#endif
-	int          index;
-	int          score;
+	void*               UserPTR; /* just for user(DDSL never touch) */
+	char*               Name;
+	ComputeVal          Function;
+	double              Value;
+	struct VARIABLE**   Rhsvs;
+	unsigned int        UFlag;
+	unsigned int        SFlag;
+	int                 Nr;
+	struct VARIABLE*    next;
+	int                 index;
+	int                 score;
 } DdsVariable;
 
-#ifdef __cplusplus
 typedef struct PROCESSOR {
-#else
-typedef struct {
-#endif
-		void*         UserPTR; /* just for user(DDSL never touch) */
-		int           method;  /* Integration method or steady-state specification */
-		unsigned int  i_backtrack; /* DDS_FLAG_INTEGRATED if 'NOT' backtrack through <I>,0 enable to backtrach through <I>,for BW=EULER method.*/
-		int           status;  /* status of function call */
+		void*           UserPTR; /* just for user(DDSL never touch) */
+		int             method;  /* Integration method or steady-state specification */
+		unsigned int    i_backtrack; /* DDS_FLAG_INTEGRATED if 'NOT' backtrack through <I>,0 enable to backtrach through <I>,for BW=EULER method.*/
+		int             status;  /* status of function call */
+
 		/* changed at DdsAddVariableV/A() stage */
-		DdsVariable** Vars;    /* Variables registered  */
-		int           v_count; /* Total number of variables registered to Vars[] */
-		int           v_max;   /* Size of the Vars[] */
-		int           rhsv_extra; /* extra space for each variable. */
-		DdsVariable*  Time;  /* Time */
-		DdsVariable*  Step;  /* Step */
+		DdsVariable**   Vars;    /* Variables registered  */
+		int             v_count; /* Total number of variables registered to Vars[] */
+		int             v_max;   /* Size of the Vars[] */
+		int             rhsv_extra; /* extra space for each variable. */
+
+		/* Built-in variables. */
+		DdsVariable*    Time;  /* Time */
+		DdsVariable*    Step;  /* Step */
 
 		/* Arrays dynamically allocated during the processing. */
 		/* Allocated and changed by DdsCheckRouteFT() */
-		DdsVariable**  Ts;      /* <T>s */
-		int            t_count; /* number of <T>s effective */
-		DdsVariable*** Fs;      /* Fs[i][0] is paired <F> with <T>[i],other Fs[i][] are <F>s connected. */
-		int*           f_count; /* f_count[i] is the count of <F>s connected to <T>[i]. */
-		int*           f_max;   /* f_max[i] is the max size of Fs[i][...]*/
-		int           *b_size;  /* size of each block */
-		int            b_count; /* total number of blocks. */
-		DdsVariable**  Is;      /* <I>s */
-		int            i_count; /* the size of Is[] */
+		DdsVariable**   Ts;      /* <T>s */
+		int             t_count; /* number of <T>s effective */
+		DdsVariable***  Fs;      /* Fs[i][0] is paired <F> with <T>[i],other Fs[i][] are <F>s connected. */
+		int*            f_count; /* f_count[i] is the count of <F>s connected to <T>[i]. */
+		int*            f_max;   /* f_max[i] is the max size of Fs[i][...]*/
+		int            *b_size;  /* size of each block */
+		int             b_count; /* total number of blocks. */
+		DdsVariable**   Is;      /* <I>s */
+		int             i_count; /* the size of Is[] */
+		double*         R_IVS;   /* Save area for current <I>s */
+
 		/* work array used by runge-kutta method */
-		double*        R_K1;
-		double*        R_K2;
-		double*        R_K3;
-		double*        R_K4;
-		double*        R_IVS;
+		double*         R_K1;
+		double*         R_K2;
+		double*         R_K3;
+		double*         R_K4;
 
 		/* setup by DdsBuildSequence(): Sequence list */
-		DdsVariable*  VTopOnceT;
-		DdsVariable*  VEndOnceT;
-		DdsVariable*  VTopAnyT;
-		DdsVariable*  VEndAnyT;
-		DdsVariable*  VTopEveryT;
-		DdsVariable*  VEndEveryT;
+		DdsVariable*    VTopOnceT;  /* Once */
+		DdsVariable*    VEndOnceT;
+		DdsVariable*    VTopAnyT;   /* At any time */
+		DdsVariable*    VEndAnyT;
+		DdsVariable*    VTopEveryT; /* Every integration steps */
+		DdsVariable*    VEndEveryT;
 
 		/* DdsComputeStatic() stage */
-		unsigned int  stage;
-		double*       jacobian;   /* Jacobian matrix (block base) */
-		double*       delta;      /* the results of SolveJacobian() in  Newton method. (block base)*/
-		double*       y_cur;      /* current value of <T>-value - value computed. (block base) */
-		double*       y_next;     /* next value of <T>-value - value computed. (block base) */
-		double*       x;          /* x(<F>s) before approximation(block base). */
-		double*       dx;         /* dx of dy/dx (total base) */
-		double*       scale;      /* scaling (used by LuDecomposition solving Jacobian) */
-		int*          pivot;      /* pivot index  (used by LuDecomposition solving Jacobian) */
-		double        eps;        /* convergence criteria */
-		int           max_iter;   /* maximum iteration count in Newton method */
+		unsigned int    stage;      /* Execution stage */
+		double*         jacobian;   /* Jacobian matrix (block base) */
+		double*         delta;      /* the results of SolveJacobian() in  Newton method. (block base)*/
+		double*         y_cur;      /* current value of <T>-value - value computed. (block base) */
+		double*         y_next;     /* next value of <T>-value - value computed. (block base) */
+		double*         x;          /* x(<F>s) before approximation(block base). */
+		double*         dx;         /* dx of dy/dx (total base) */
+		double*         scale;      /* scaling (used by LuDecomposition solving Jacobian) */
+		int*            pivot;      /* pivot index  (used by LuDecomposition solving Jacobian) */
+		double          eps;        /* convergence criteria */
+		int             max_iter;   /* maximum iteration count in Newton method */
+
+		/* Error informations(only valid in case of an error,see utils.h) */
+		const char*     Msg;
+		const char*     File;
+		int             Line;
+		int             Code;
+		ErrHandler      ErrorHandler;
 } DdsProcessor;
 
 /*
@@ -214,10 +213,13 @@ typedef DdsVariable*  DDS_VARIABLE;   /* Variable handle  */
 #define DDS_ERROR_SYSTEM        -999 /* Undefined c/c++ level error. */
 #define DDS_MSG_SYSTEM          "Undefined c/c++ level error."
 
+EXPORT(ErrHandler)    DdsGetErrorHandler(DDS_PROCESSOR p);
+EXPORT(void)          DdsSetErrorHandler(DDS_PROCESSOR p, ErrHandler handler);
+
 EXPORT(int)           DdsCreateProcessor(DDS_PROCESSOR* p, int nv);
 EXPORT(void)          DdsDeleteProcessor(DDS_PROCESSOR* p);
 EXPORT(int)           DdsAddVariableV(DDS_PROCESSOR p,DDS_VARIABLE *pv,const char *name,unsigned int f,double val, ComputeVal func,int nr,...);
-EXPORT(int)           DdsAddVariableA(DDS_PROCESSOR p, DDS_VARIABLE* pv, const char* name, unsigned int f, double val, ComputeVal func, int nr, DDS_VARIABLE** rhsvs);
+EXPORT(int)           DdsAddVariableA(DDS_PROCESSOR p, DDS_VARIABLE* pv, const char* name, unsigned int f, double val, ComputeVal func, int nr, DDS_VARIABLE* rhsvs);
 EXPORT(int)           DdsCompileGraph(DDS_PROCESSOR p,int method);
 EXPORT(int)           DdsComputeStatic(DDS_PROCESSOR ph);
 EXPORT(int)           DdsComputeDynamic(DDS_PROCESSOR ph,int method);
@@ -257,8 +259,6 @@ EXPORT(int)           DdsSieveVariable(DDS_PROCESSOR ph);
 EXPORT(int)           DdsDivideLoop(DDS_PROCESSOR ph);
 EXPORT(int)           DdsCheckRouteFT(DDS_PROCESSOR ph);
 EXPORT(int)           DdsBuildSequence(DDS_PROCESSOR ph);
-
-
 
 #if defined(__cplusplus)
 }  /* extern "C" { */

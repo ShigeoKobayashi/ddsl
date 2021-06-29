@@ -510,6 +510,8 @@ DDSL は右辺変数（RHSV）を持たず&lt;S&gt;でもない変数を見つ�
 <a href="#DdsTime">DdsTime</a><br/>
 <a href="#DdsStep">DdsStep</a><br/>
 <a href="#DdsGetVariableSequence">DdsGetVariableSequence</a><br/>
+<a href="#DdsSetErrorHandler">DdsSetErrorHandler</a><br/>
+<a href="#DdsGetErrorHandler">DdsGetErrorHandler</a><br/>
 </td><td>
 <a href="#DdsGetVariableName">DdsGetVariableName</a><br/>
 <a href="#DdsGetValue">DdsGetValue</a><br/>
@@ -575,7 +577,7 @@ DdsAddVariableV() は DDS_VARIABLE(本体は struct で ddsl.h で定義) のメ
 <li> p  ... 予め作成された、全変数を管理するための DDS_PROCESSOR(<a href="#DdsCreateProcessor">DdsCreateProcessor()</a>) 。</li>
 <li> pv ... 新しく作成された DDS_VARIABLE を受け取るための変数（ポインター）。</li>
 <li> name ... 新規作成される変数 pv の名前。</li>
-<li> f ... pv の<a href="#FLAG">フラグ</a>。</li>
+<li> f ... pv の<a href="#FLAG">ユーザーフラグ</a>。</li>
 <li> val ... pv の値（初期値）。</li>
 <li> func ... pv の値を計算する関数（ポインター、ddsl.h 参照)。</li>
 <li> nr,... pv の右辺変数の個数（ 0 可）。以後は nr 個の右辺変数の並び（nr 個の可変引数）。</li>
@@ -589,7 +591,7 @@ DdsAddVariableV() は DDS_VARIABLE(本体は struct で ddsl.h で定義) のメ
 <a name="DdsAddVariableA"/>
 <table width="100%" border="1">
 <col width="10%">
-<tr><td>int</td><td>DdsAddVariableA(DDS_PROCESSOR p, DDS_VARIABLE* pv, const char* name, unsigned int f, double val, ComputeVal func, int nr, DDS_VARIABLE** rhsvs)</td></tr>
+<tr><td>int</td><td>DdsAddVariableA(DDS_PROCESSOR p, DDS_VARIABLE* pv, const char* name, unsigned int f, double val, ComputeVal func, int nr, DDS_VARIABLE* rhsvs)</td></tr>
 </table>
 DdsAddVariableA() は最後の右辺変数指定が nr 個の要素を持つ変数配列である以外は <a href="#DdsAddVariableV">DdsAddVariableV()</a> と同じです。<br/>
 <b>※: 戻り値 0 は正常終了。ゼロ以外はエラーコード</b>。　各エラーコードの値は ddsl.h を参照。
@@ -613,7 +615,7 @@ DdsCompileGraph() は計算順序決定の際に全ての変数を以下の 3 �
 <li><a href="#EVERY_TIME">DDS_COMPUTED_EVERY_TIME (&lt;ET&gt;)</a>: 各積分刻み毎に毎回計算される変数。つまり、 &lt;I&gt; から &lt;DR&gt; までのルート上に存在する変数。</li>
 <li><a href="#EVERY_TIME">DDS_COMPUTED_ANY_TIME (&lt;AT&gt;)</a>: 時間依存ではあるものの &lt;ET&gt; ではない変数。</ul>
 
-引数は 0(デフォルト:DDS_I_RUNGE_KUTTA)、または以下の一つ:
+引数 method は 0(デフォルト:DDS_I_RUNGE_KUTTA)、または以下の一つ:
 <ul>
 <li>DDS_I_EULER or DDS_I_RUNGE_KUTTA  ... Euler または Runge-Kutta 方を積分に使用する場合(次に DdsComputeDynamic(p) を呼び出す必要があります)。</li>
 <li>DDS_I_BW_EULER  ... 積分に Backward Euler 方を用いる場合(次に DdsComputeDynamic(p) を呼び出す必要があります)。</li>
@@ -651,6 +653,23 @@ DDS_I_EULER または DDS_I_RUNGE_KUTTA は、 <a href="#DdsCompileGraph">DdsCom
 <b>※:</b> <a href="#DdsTime">時間(t)</a> は自動的に <a href="#DdsStep">時間刻み</a> （予め設定されている必要があります）分更新されます。
 <br/>
 <b>※: 戻り値 0 は正常終了。ゼロ以外はエラーコード</b>。　各エラーコードの値は ddsl.h を参照。
+<p/>
+
+<a name="DdsGetErrorHandler" />
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>ErrHandler</td><td>DdsGetErrorHandler(DDS_PROCESSOR p)</td></tr>
+</table>
+DdsGetErrorHandler() はプロセッサー p に登録されているエラーハンドラー（ErrorHandler）を返します。<br/>
+ユーザーはこのエラーハンドラーを利用してエラー時の情報を得ることが出来ます(参照：ddsl.h)。
+<p/>
+<a name="DdsSetErrorHandler" />
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>void</td><td>DdsSetErrorHandler(DDS_PROCESSOR p, ErrHandler handler)</td></tr>
+</table>
+DdsSetErrorHandler() はエラーハンドラー ErrorHandler（handler）をプロセッサー p に登録します。<br/>
+ユーザーはこのエラーハンドラーを利用してエラー時の情報を得ることが出来ます(参照：ddsl.h)。
 <p/>
 
 <a name="DdsTime"/>

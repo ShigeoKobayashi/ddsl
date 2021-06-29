@@ -2,7 +2,7 @@
  *
  * DDSL: Digital Dynamic Simulation Library (C/C++ Library).
  *
- * Copyright(C) 2020 by Shigeo Kobayashi(shigeo@tinyforest.jp).
+ * Copyright(C) 2021 by Shigeo Kobayashi(shigeo@tinyforest.jp).
  *
  */
 
@@ -43,7 +43,7 @@ EXPORT(int) DdsSieveVariable(DDS_PROCESSOR ph)
 		DdsVariable* pv = VARIABLE(i);
 		if (!IS_SFLAG_AND(pv,DDS_FLAG_TARGETED|DDS_SFLAG_DIVIDED)) break;
 		VARIABLE_COUNT()--;
-		MemFree((void**)&(pv));
+		MemFree(p,(void**)&(pv));
 	}
 	DdsFreeWorkMemory(ph);
 

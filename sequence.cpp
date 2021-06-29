@@ -2,7 +2,7 @@
  *
  * DDSL: Digital Dynamic Simulation Library (C/C++ Library).
  *
- * Copyright(C) 2020 by Shigeo Kobayashi(shigeo@tinyforest.jp).
+ * Copyright(C) 2021 by Shigeo Kobayashi(shigeo@tinyforest.jp).
  *
  */
 
@@ -38,7 +38,7 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 	V_TOP_EVERYT() = nullptr;
 	V_END_EVERYT() = nullptr;
 
-	if(I_COUNT()>0) IVs() = (DdsVariable**)MemAlloc(sizeof(DdsVariable*) * I_COUNT());
+	if(I_COUNT()>0) IVs() = (DdsVariable**)MemAlloc(p,sizeof(DdsVariable*) * I_COUNT());
 	int n_volatile = 0; // <V> counter
 	int block      = 0; // block label
 	int ni         = 0; // <I> counter

@@ -49,7 +49,8 @@ Copylight (c) 2020 Shigeo Kobayashi. All rights reserved.<br/>
 <p/>
 <b>DDSL(<U>D</U>igital <U>D</U>ynamic <U>S</U>imulation <U>L</U>ibrary for C/C++,based on Graph Theory)</b> is the library to assist numerical simulation for <b>dynamics and statics</b>.<br/>
 <b>DDSL</b> implements <b>Newton-method</b> for <a href="#TRIANGULAR">solving non-linear algebraic eqution systems<a> for static simulation and <b>Euler,Backward Euler,and Runge-Kutta methods</b> for <a href="#INTEGRATED">solving ordinary differential equation systems</a> for dynamic simulation.<br/>
-The users,although,need not use these methos directly with the assistance of Graph-theory(about the theory,see <a href="#REF">References</a>.).<br/>
+The users,although,need not use these methos directly.<br/>
+With the assistance of Graph-theory(about the theory,see <a href="#REF">References</a>.),
 DDSL automaticaly determines computation sequence,constructs non-linear equation and ordinary differential equation systems if necessary,and solve them.
 
 <a name="OVER_VIEW"/>
@@ -496,6 +497,9 @@ If the user wants to know the value of &lt;AT&gt; variable,user must call <a hre
 <a href="#DdsTime">DdsTime</a><br/>
 <a href="#DdsStep">DdsStep</a><br/>
 <a href="#DdsGetVariableSequence">DdsGetVariableSequence</a><br/>
+<a href="#DdsSetErrorHandler">DdsSetErrorHandler</a><br/>
+<a href="#DdsGetErrorHandler">DdsGetErrorHandler</a><br/>
+
 </td><td>
 <a href="#DdsGetVariableName">DdsGetVariableName</a><br/>
 <a href="#DdsGetValue">DdsGetValue</a><br/>
@@ -578,7 +582,7 @@ And register newly created variable to the processor <b>p</b>.
 <a name="DdsAddVariableA"/>
 <table width="100%" border="1">
 <col width="10%">
-<tr><td>int</td><td>DdsAddVariableA(DDS_PROCESSOR p, DDS_VARIABLE* pv, const char* name, unsigned int f, double val, ComputeVal func, int nr, DDS_VARIABLE** rhsvs)</td></tr>
+<tr><td>int</td><td>DdsAddVariableA(DDS_PROCESSOR p, DDS_VARIABLE* pv, const char* name, unsigned int f, double val, ComputeVal func, int nr, DDS_VARIABLE* rhsvs)</td></tr>
 </table>
 DdsAddVariableA() is almost the same as <a href="#DdsAddVariableV">DdsAddVariableV()</a> above except for the last argument.<br/>
 The last argument of DdsAddVariableA() is an array of RHSVs of size nr.
@@ -797,6 +801,23 @@ The argument seq must be the one listed above.:
      v = DdsGetVariableNext(v);
   }
 </code></pre> 
+
+<a name="DdsGetErrorHandler" />
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>ErrHandler</td><td>DdsGetErrorHandler(DDS_PROCESSOR p)</td></tr>
+</table>
+DdsGetErrorHandler() returns ErrorHandler if registered to the processor p.<br/>
+The user can obtain some error informations through this function on error(see ddsl.h).
+<p/>
+<a name="DdsSetErrorHandler" />
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>void</td><td>DdsSetErrorHandler(DDS_PROCESSOR p, ErrHandler handler)</td></tr>
+</table>
+DdsSetErrorHandler() sets ErrorHandler(handler) to the processor p.<br/>
+The user can obtain some error informations through this function on error(see ddsl.h).
+<p/>
 
 <a name="DdsGetEPS"/>
 <table width="100%" border="1">

@@ -2,7 +2,7 @@
  *
  * DDSL: Digital Dynamic Simulation Library (C/C++ Library).
  *
- * Copyright(C) 2020 by Shigeo Kobayashi(shigeo@tinyforest.jp).
+ * Copyright(C) 2021 by Shigeo Kobayashi(shigeo@tinyforest.jp).
  *
  */
 
@@ -23,6 +23,18 @@
 #include "ddsl_main.h"
 #include "utils.h"
 #include "debug.h"
+
+//
+// Error handler ... see utils.h
+//
+EXPORT(ErrHandler)    DdsGetErrorHandler(DDS_PROCESSOR p)
+{
+	return p->ErrorHandler;
+}
+EXPORT(void)          DdsSetErrorHandler(DDS_PROCESSOR p, ErrHandler handler)
+{
+	p->ErrorHandler = handler;
+}
 
 
 EXPORT(int)  DdsCompileGraph(DDS_PROCESSOR p,int method)
@@ -61,8 +73,8 @@ EXPORT(int)  DdsCreateProcessor(DDS_PROCESSOR* p, int nv)
 {
 	try {
 		if (nv <= 0) nv = 10;
-		DdsProcessor* pr = (DdsProcessor*)MemAlloc(sizeof(DdsProcessor));
-		pr->Vars = (DdsVariable**)MemAlloc(sizeof(DdsVariable*) * nv);
+		DdsProcessor* pr = (DdsProcessor*)MemAlloc(nullptr,sizeof(DdsProcessor));
+		pr->Vars = (DdsVariable**)MemAlloc(pr,sizeof(DdsVariable*) * nv);
 		pr->v_count = 0;
 		pr->v_max   = nv;
 		*p = (DDS_PROCESSOR)pr;
@@ -138,30 +150,30 @@ EXPORT(void) DdsFreeWorkMemory(DDS_PROCESSOR ph)
 	if (ph == nullptr) return;
 	DdsProcessor* p = (DdsProcessor*)(ph);
 	// free memories allocated at  DdsCheckRouteFT()
-	if (TVs() != nullptr)          MemFree((void**)&(TVs()));
-	if (F_COUNTs() != nullptr)     MemFree((void**)&(F_COUNTs()));
-	if (F_MAX_COUNTs() != nullptr) MemFree((void**)&(F_MAX_COUNTs()));
+	if (TVs() != nullptr)          MemFree(p,(void**)&(TVs()));
+	if (F_COUNTs() != nullptr)     MemFree(p,(void**)&(F_COUNTs()));
+	if (F_MAX_COUNTs() != nullptr) MemFree(p,(void**)&(F_MAX_COUNTs()));
 	for (int i = 0; i < T_COUNT(); ++i) {
-		MemFree((void**)&(Fs_CONNECTED(i)));
+		MemFree(p,(void**)&(Fs_CONNECTED(i)));
 	}
-	if (FT_MATRIX() != nullptr)    MemFree((void**)&(FT_MATRIX()));
+	if (FT_MATRIX() != nullptr)    MemFree(p,(void**)&(FT_MATRIX()));
 	// DdsBuildSequence()
-	if (IVs() != nullptr)          MemFree((void**)&(IVs()));
+	if (IVs() != nullptr)          MemFree(p,(void**)&(IVs()));
 	// DdsComputeStatic()
-	if (JACOBIAN_MATRIX() != nullptr)   MemFree((void**)&(JACOBIAN_MATRIX()));
-	if (DELTAs() != nullptr)       MemFree((void**)&(DELTAs()));
-	if (Xs() != nullptr)           MemFree((void**)&(Xs()));
-	if (DXs() != nullptr)          MemFree((void**)&(DXs()));
-	if (Ys() != nullptr)           MemFree((void**)&(Ys()));
-	if (Y_NEXTs() != nullptr)      MemFree((void**)&(Y_NEXTs()));
-	if (SCALE() != nullptr)        MemFree((void**)&(SCALE()));
-	if (PIVOT() != nullptr)        MemFree((void**)&(PIVOT()));
+	if (JACOBIAN_MATRIX() != nullptr)   MemFree(p,(void**)&(JACOBIAN_MATRIX()));
+	if (DELTAs() != nullptr)       MemFree(p,(void**)&(DELTAs()));
+	if (Xs() != nullptr)           MemFree(p,(void**)&(Xs()));
+	if (DXs() != nullptr)          MemFree(p,(void**)&(DXs()));
+	if (Ys() != nullptr)           MemFree(p,(void**)&(Ys()));
+	if (Y_NEXTs() != nullptr)      MemFree(p,(void**)&(Y_NEXTs()));
+	if (SCALE() != nullptr)        MemFree(p,(void**)&(SCALE()));
+	if (PIVOT() != nullptr)        MemFree(p,(void**)&(PIVOT()));
 	// RUNGE-KUTTA working arrays.
-	if (p->R_K1  != nullptr)        MemFree((void**)&(p->R_K1));
-	if (p->R_K2  != nullptr)        MemFree((void**)&(p->R_K2));
-	if (p->R_K3  != nullptr)        MemFree((void**)&(p->R_K3));
-	if (p->R_K4  != nullptr)        MemFree((void**)&(p->R_K4));
-	if (p->R_IVS != nullptr)        MemFree((void**)&(p->R_IVS));
+	if (p->R_K1  != nullptr)        MemFree(p,(void**)&(p->R_K1));
+	if (p->R_K2  != nullptr)        MemFree(p,(void**)&(p->R_K2));
+	if (p->R_K3  != nullptr)        MemFree(p,(void**)&(p->R_K3));
+	if (p->R_K4  != nullptr)        MemFree(p,(void**)&(p->R_K4));
+	if (p->R_IVS != nullptr)        MemFree(p,(void**)&(p->R_IVS));
 
 	T_COUNT() = 0;
 	B_COUNT() = 0;
@@ -172,13 +184,13 @@ EXPORT(void) DdsDeleteProcessor(DDS_PROCESSOR* ph)
 {
 	if (ph == nullptr) return;
 	DdsProcessor* p = (DdsProcessor*)(*ph);
-	for(int i=0;i<VARIABLE_COUNT();++i) MemFree((void**)&(VARIABLE(i)));
-	MemFree((void**)&(VARIABLEs()));
+	for(int i=0;i<VARIABLE_COUNT();++i) MemFree(p,(void**)&(VARIABLE(i)));
+	MemFree(p,(void**)&(VARIABLEs()));
 	
 	DdsFreeWorkMemory(*ph);
 
 	// Finally delete processor!
-	MemFree((void**)&(p));
+	MemFree(p,(void**)&(p));
 	*ph = nullptr;
 	_D(PrintAllocCount("DdsDeleteProcessor()"));
 }
@@ -217,7 +229,7 @@ EXPORT(DDS_VARIABLE*) DdsGetRhsvs(int* nr, DDS_VARIABLE v)
 static void AddVariable(DdsProcessor* p, DdsVariable* pv)
 {
 	if (p->v_count >= p->v_max) {
-		p->Vars = (DdsVariable**)MemRealloc(p->Vars, (p->v_max += p->v_max / 9 + 5)*sizeof(DdsVariable*));
+		p->Vars = (DdsVariable**)MemRealloc(p,p->Vars, (p->v_max += p->v_max / 9 + 5)*sizeof(DdsVariable*));
 	}
 	p->Vars[p->v_count++] = pv;
 }
@@ -225,7 +237,7 @@ static void AddVariable(DdsProcessor* p, DdsVariable* pv)
 static DdsVariable* AllocVariable(DdsProcessor *p,const char* name, unsigned int f, double val, ComputeVal func, int nr)
 {
 	int l = strlen(name) + 3;
-	DdsVariable* v = (DdsVariable*)MemAlloc(sizeof(DdsVariable) + l + (nr+ RHSV_EX()) * sizeof(DdsVariable*));
+	DdsVariable* v = (DdsVariable*)MemAlloc(p,sizeof(DdsVariable) + l + (nr+ RHSV_EX()) * sizeof(DdsVariable*));
 	v->Function = (ComputeVal)func;
 	v->Value = val;
 	v->UFlag = DdsSetUserFlagOn((DDS_VARIABLE)v, f);
@@ -236,12 +248,12 @@ static DdsVariable* AllocVariable(DdsProcessor *p,const char* name, unsigned int
 	return v;
 }
 
-EXPORT(int)  DdsAddVariableA(DDS_PROCESSOR p, DDS_VARIABLE* pv, const char* name, unsigned int f, double val, ComputeVal func, int nr, DDS_VARIABLE** rhsvs)
+EXPORT(int)  DdsAddVariableA(DDS_PROCESSOR p, DDS_VARIABLE* pv, const char* name, unsigned int f, double val, ComputeVal func, int nr, DDS_VARIABLE* rhsvs)
 {
 	try {
-		DdsVariable* v = AllocVariable(p,name, f, val, func, nr);
+		DDS_VARIABLE v = AllocVariable(p,name, f, val, func, nr);
 		for (int i = 0; i < nr; ++i) {
-			v->Rhsvs[i] = (VARIABLE*)rhsvs[i];
+			v->Rhsvs[i] = (DDS_VARIABLE)rhsvs[i];
 		}
 		*pv = v;
 		AddVariable((DdsProcessor*)p, v);

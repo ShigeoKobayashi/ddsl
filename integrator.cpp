@@ -2,7 +2,7 @@
  *
  * DDSL: Digital Dynamic Simulation Library (C/C++ Library).
  *
- * Copyright(C) 2020 by Shigeo Kobayashi(shigeo@tinyforest.jp).
+ * Copyright(C) 2021 by Shigeo Kobayashi(shigeo@tinyforest.jp).
  *
  */
 
@@ -44,7 +44,7 @@ EXPORT(int) DdsComputeDynamic(DDS_PROCESSOR ph,int method)
 
 	if (STAGE() == 0) {
 		double stp = VALUE(STEP());
-		if(I_COUNT()>0) ISs = (double*)MemAlloc(sizeof(double) * I_COUNT());
+		if(I_COUNT()>0) ISs = (double*)MemAlloc(p,sizeof(double) * I_COUNT());
 		if (METHOD() == DDS_I_BW_EULER) VALUE(STEP()) = 0.0;
 		for (int i = 0; i < I_COUNT(); ++i) {
 			INDEX(IV(i)) = i;
@@ -84,10 +84,10 @@ static void RK(DdsProcessor* p)
 
 	if (I_COUNT() <= 0) return;
 	if (K1s == nullptr) {
-		K1s = (double*)MemAlloc(sizeof(double) * I_COUNT());
-		K2s = (double*)MemAlloc(sizeof(double) * I_COUNT());
-		K3s = (double*)MemAlloc(sizeof(double) * I_COUNT());
-		K4s = (double*)MemAlloc(sizeof(double) * I_COUNT());
+		K1s = (double*)MemAlloc(p,sizeof(double) * I_COUNT());
+		K2s = (double*)MemAlloc(p,sizeof(double) * I_COUNT());
+		K3s = (double*)MemAlloc(p,sizeof(double) * I_COUNT());
+		K4s = (double*)MemAlloc(p,sizeof(double) * I_COUNT());
 	}
 
 	// K1

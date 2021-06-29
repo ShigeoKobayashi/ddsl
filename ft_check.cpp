@@ -2,7 +2,7 @@
  *
  * DDSL: Digital Dynamic Simulation Library (C/C++ Library).
  *
- * Copyright(C) 2020 by Shigeo Kobayashi(shigeo@tinyforest.jp).
+ * Copyright(C) 2021 by Shigeo Kobayashi(shigeo@tinyforest.jp).
  *
  */
 
@@ -47,11 +47,11 @@ EXPORT(int) DdsCheckRouteFT(DDS_PROCESSOR ph)
 
 	//
 	// allocate <F> & <T> related memories.
-	TVs()          = (DdsVariable**)MemAlloc(sizeof(DdsVariable*) * T_COUNT());
-	F_COUNTs()     = (int*)MemAlloc(sizeof(int) * T_COUNT());
-    F_MAX_COUNTs() = (int*)MemAlloc(sizeof(int) * T_COUNT());
-    FT_MATRIX()    = (DdsVariable***)MemAlloc(sizeof(DdsVariable**) * T_COUNT());
-	for(int i=0;i<T_COUNT();++i)  Fs_CONNECTED(i) = (DdsVariable**)MemAlloc(sizeof(DdsVariable*) * 2);
+	TVs()          = (DdsVariable**)MemAlloc(p,sizeof(DdsVariable*) * T_COUNT());
+	F_COUNTs()     = (int*)MemAlloc(p,sizeof(int) * T_COUNT());
+    F_MAX_COUNTs() = (int*)MemAlloc(p,sizeof(int) * T_COUNT());
+    FT_MATRIX()    = (DdsVariable***)MemAlloc(p,sizeof(DdsVariable**) * T_COUNT());
+	for(int i=0;i<T_COUNT();++i)  Fs_CONNECTED(i) = (DdsVariable**)MemAlloc(p,sizeof(DdsVariable*) * 2);
 
 	int ix = 0;
 	for (int i = 0; i < cv; ++i) {
@@ -68,7 +68,7 @@ EXPORT(int) DdsCheckRouteFT(DDS_PROCESSOR ph)
 	auto ADD_F = [&p](int i, DdsVariable* f) {
 		if (F_COUNT(i) >= F_MAX_COUNT(i)) {
 			F_MAX_COUNT(i) += F_MAX_COUNT(i) / 5 + 2;
-			Fs_CONNECTED(i) = (DdsVariable**)MemRealloc(Fs_CONNECTED(i),sizeof(DdsVariable*) * F_MAX_COUNT(i));
+			Fs_CONNECTED(i) = (DdsVariable**)MemRealloc(p,Fs_CONNECTED(i),sizeof(DdsVariable*) * F_MAX_COUNT(i));
 		}
 		Fs_CONNECTED(i)[F_COUNT(i)++] = f;
 	};

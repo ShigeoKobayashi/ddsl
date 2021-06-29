@@ -2,7 +2,7 @@
  *
  * DDSL: Digital Dynamic Simulation Library (C/C++ Library).
  *
- * Copyright(C) 2020 by Shigeo Kobayashi(shigeo@tinyforest.jp).
+ * Copyright(C) 2021 by Shigeo Kobayashi(shigeo@tinyforest.jp).
  *
  */
 
@@ -103,7 +103,7 @@ EXPORT(int) DdsDivideLoop(DDS_PROCESSOR ph)
 		//
 		int re = RHSV_EX();
 		RHSV_EX() = 1;
-		int e = DdsAddVariableA(p, &pv, NAME(v_divided), USER_FLAG(v_divided), VALUE(v_divided), FUNCTION(v_divided), RHSV_COUNT(v_divided), (DDS_VARIABLE**)RHSVs(v_divided));
+		int e = DdsAddVariableA(p, &pv, NAME(v_divided), USER_FLAG(v_divided), VALUE(v_divided), FUNCTION(v_divided), RHSV_COUNT(v_divided), (DDS_VARIABLE*)RHSVs(v_divided));
 		RHSV_EX() = re;
 		if (e != 0) THROW(e, "Can not divide a variable (or create a new variable) in DdsDivideLoop()");
 		SET_SFLAG_ON(pv       , SYS_FLAG(v_divided) | DDS_FLAG_TARGETED | DDS_SFLAG_DIVIDED | DDS_SFLAG_CHECKED);

@@ -2,7 +2,7 @@
  *
  * DDSL main routines.
  *
- *  Copyright(C) 2020 by Shigeo Kobayashi(shigeo@tinyforest.jp).
+ *  Copyright(C) 2021 by Shigeo Kobayashi(shigeo@tinyforest.jp).
  *
  */
 #ifndef __INC_DDSL_MAIN__

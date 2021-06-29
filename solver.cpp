@@ -2,7 +2,7 @@
  *
  * DDSL: Digital Dynamic Simulation Library (C/C++ Library).
  *
- * Copyright(C) 2020 by Shigeo Kobayashi(shigeo@tinyforest.jp).
+ * Copyright(C) 2021 by Shigeo Kobayashi(shigeo@tinyforest.jp).
  *
  */
 
@@ -24,8 +24,8 @@
 #define CONVERGED()     (norm <= EPS())
 #define NOT_CONVERGED() (norm >  EPS())
 
-static int  LuDecomp(double* A, double* scales, int* index, int n);
-static void LuSolve(double* x, double* LU, double* b, int* index, int n);
+static int  LuDecomp(DdsProcessor *p,double* A, double* scales, int* index, int n);
+static void LuSolve(DdsProcessor* p, double* x, double* LU, double* b, int* index, int n);
 
 static DdsVariable* Newton(DdsProcessor* p, DdsVariable* v_top);
 static void         ComputeStatic(DdsProcessor* p, DdsVariable* v_top);
@@ -59,14 +59,14 @@ EXPORT(int) DdsComputeStatic(DDS_PROCESSOR ph)
 			if (m < B_SIZE(i)) m = B_SIZE(i);
 		}
         if (m > 0) {
-            JACOBIAN_MATRIX() = (double*)MemAlloc(sizeof(double) * m * m);
-            DELTAs()          = (double*)MemAlloc(sizeof(double) * m);  // delta of f(x+delta) = f(x) + (df/dx)delta = 0
-            Xs()              = (double*)MemAlloc(sizeof(double) * m);
-            DXs()             = (double*)MemAlloc(sizeof(double) * T_COUNT());  // dx of dy/dx (derivation,total base)
-            Ys()              = (double*)MemAlloc(sizeof(double) * m);
-            Y_NEXTs()         = (double*)MemAlloc(sizeof(double) * m);
-            SCALE()           = (double*)MemAlloc(sizeof(double) * m);
-            PIVOT()           = (int   *)MemAlloc(sizeof(int) * m);
+            JACOBIAN_MATRIX() = (double*)MemAlloc(p,sizeof(double) * m * m);
+            DELTAs()          = (double*)MemAlloc(p,sizeof(double) * m);  // delta of f(x+delta) = f(x) + (df/dx)delta = 0
+            Xs()              = (double*)MemAlloc(p,sizeof(double) * m);
+            DXs()             = (double*)MemAlloc(p,sizeof(double) * T_COUNT());  // dx of dy/dx (derivation,total base)
+            Ys()              = (double*)MemAlloc(p,sizeof(double) * m);
+            Y_NEXTs()         = (double*)MemAlloc(p,sizeof(double) * m);
+            SCALE()           = (double*)MemAlloc(p,sizeof(double) * m);
+            PIVOT()           = (int   *)MemAlloc(p,sizeof(int) * m);
         }
 		STAGE() = DDS_COMPUTED_ONCE;
         // Compute everything at the first.
@@ -220,8 +220,8 @@ double ComputeBlock(DdsProcessor* p,DdsVariable* pv,double *y)
 
 static void SolveJacobian(DdsProcessor* p,int n)
 {
-    LuDecomp(JACOBIAN_MATRIX(), SCALE(), PIVOT(), n);
-    LuSolve(DELTAs(), JACOBIAN_MATRIX(), Ys(), PIVOT(), n);
+    LuDecomp(p,JACOBIAN_MATRIX(), SCALE(), PIVOT(), n);
+    LuSolve(p,DELTAs(), JACOBIAN_MATRIX(), Ys(), PIVOT(), n);
     for (int i = 0; i < n; ++i) DELTA(i) = -DELTA(i);
 }
 
@@ -270,7 +270,7 @@ static void Derivate(DdsProcessor *p,DdsVariable *pv,int n, int ix_top, int j)
  //        -k(negative), failed to decompose when processing A[k-1,*].
  //
 static 
-int LuDecomp(double* A, double* scales, int* index, int n)
+int LuDecomp(DdsProcessor *p,double* A, double* scales, int* index, int n)
 {
 	double biggst;
 	double v;
@@ -344,7 +344,7 @@ int LuDecomp(double* A, double* scales, int* index, int n)
 // index[n] must be the array processed by DtxLuDecomp().
 // 
 static
-void LuSolve(double* x, double* LU, double* b, int* index, int n)
+void LuSolve(DdsProcessor *p,double* x, double* LU, double* b, int* index, int n)
 {
 	double dot = 0.0;
 	int ix;
