@@ -362,6 +362,13 @@ EXPORT(int) DdsCheckRouteFT(DDS_PROCESSOR ph)
 		}
 	}
 
+	// Final procedure: Let each INDEX(<F>) and INDEX(<T>)  have it's index to Fs & Ts.
+	for (int i = 0; i < T_COUNT(); ++i) {
+		// reset INDEX
+		INDEX(TV(i)) = i;
+		INDEX(F_PAIRED(i)) = i;
+	}
+
 #ifdef _DEBUG
 	printf("BLOCKS:");
 	for (int i = 0; i < B_COUNT(); ++i) printf(" %d", B_SIZE(i));

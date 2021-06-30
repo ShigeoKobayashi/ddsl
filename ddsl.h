@@ -120,6 +120,7 @@ typedef struct PROCESSOR {
 		int*            pivot;      /* pivot index  (used by LuDecomposition solving Jacobian) */
 		double          eps;        /* convergence criteria */
 		int             max_iter;   /* maximum iteration count in Newton method */
+		int             current_block; /* Current block computed (0-base,for debugging) */
 
 		/* Error informations(only valid in case of an error,see utils.h) */
 		const char*     Msg;

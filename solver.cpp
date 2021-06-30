@@ -34,6 +34,9 @@ static void         ComputeJacobian(DdsProcessor *p,DdsVariable *pv,int n,int ix
 static void         SolveJacobian(DdsProcessor* p, int n);
 static void         Derivate(DdsProcessor* p, DdsVariable* pv, int n, int ix_top, int j);
 
+//
+//  Set INDEX(IV(i)) = i at the start of DdsComputeDynamic()
+//
 static double Euler(DdsProcessor* p, DdsVariable* v)
 {
     // <I> = <I> + <DR>*STEP()
@@ -202,6 +205,7 @@ static
 double ComputeBlock(DdsProcessor* p,DdsVariable* pv,double *y)
 {
     ASSERT(!IS_FREE(pv));
+    p->current_block = SCORE(pv)-1; // For debugging, save block number to solved.
     double norm = 0.0;
     while (!IS_TARGETED(pv)) {
         VALUE(pv) = FUNCTION(pv)(p, pv);
@@ -289,6 +293,7 @@ int LuDecomp(DdsProcessor *p,double* A, double* scales, int* index, int n)
 		if (biggst > 0.0) scales[i] = 1.0 / biggst;
 		else {
 			ASSERT(false);
+            TRACE_EX(("Singular Jacobian at block %d", p->current_block));
             THROW(DDS_ERROR_JACOBIAN, DDS_MSG_JACOBIAN);
 			// return -(i + 1); // Singular matrix(case 1): no non-zero elements in row(i) found.
 		}
@@ -309,6 +314,7 @@ int LuDecomp(DdsProcessor *p,double* A, double* scales, int* index, int n)
 		}
 		if (biggst <= 0.0) {
             ASSERT(false);
+            TRACE_EX(("Singular Jacobian at block %d", p->current_block));
             THROW(DDS_ERROR_JACOBIAN, DDS_MSG_JACOBIAN);
 			// return -(k + 1); // Singular matrix(case 2): no non-zero elements in row(k) found.
 		}
@@ -332,6 +338,7 @@ int LuDecomp(DdsProcessor *p,double* A, double* scales, int* index, int n)
 	}
 	if (A[_IX2(index[n1], n1)] == 0.0) {
 		ASSERT(false);
+        TRACE_EX(("Singular Jacobian at block %d", p->current_block));
         THROW(DDS_ERROR_JACOBIAN, DDS_MSG_JACOBIAN);
         // return -(n1 + 1); // Singular matrix(case 3) at n1.
 	}

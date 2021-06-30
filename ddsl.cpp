@@ -352,17 +352,16 @@ EXPORT(void) DdsDbgPrintF(FILE* f, const char* title, DDS_PROCESSOR p)
 		else                                        fprintf(f, " et |");
 		if (DDS_FLAG_OR(F, DDS_SFLAG_CHECKED))      fprintf(f, " CH ");  /* Checked */
 		else                                        fprintf(f, " ch ");
-
-		fprintf(f, "]{S%04d:I%04d}",pv->score,pv->index);
-		if (pv->Function == nullptr) fprintf(f, "?(");
-		else                         fprintf(f, "f(");
+		fprintf(f, "V:%lE ", pv->Value);
+		fprintf(f, "S:%04d I:%04d]",pv->score,pv->index);
+		if (pv->Function == nullptr) fprintf(f, " ?(");
+		else                         fprintf(f, " f(");
 		for (int j = 0; j < RHSV_COUNT(pv); ++j) {
 			if (pv->Rhsvs[j] == nullptr) fprintf(f, "? ");
 			else                         fprintf(f, "%s ", (pv->Rhsvs[j])->Name);
 		}
 		fprintf(f,")");
-		if (pv->next != nullptr) fprintf(f, "->%s", (pv->next)->Name);
-		fprintf(f,"=%lE", pv->Value);
+		if (pv->next != nullptr) fprintf(f, " N:%s", (pv->next)->Name);
 		fprintf(f, "\n");
 	}
 }
