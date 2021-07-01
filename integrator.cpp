@@ -42,7 +42,7 @@ EXPORT(int) DdsComputeDynamic(DDS_PROCESSOR ph,int method)
 
 	// Save current value
 
-	if (STAGE() == 0) {
+	if (STAGE() == 0 || (I_COUNT() > 0 && ISs==nullptr)) {
 		double stp = VALUE(STEP());
 		if(I_COUNT()>0) ISs = (double*)MemAlloc(p,sizeof(double) * I_COUNT());
 		if (METHOD() == DDS_I_BW_EULER) VALUE(STEP()) = 0.0;

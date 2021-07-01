@@ -46,7 +46,7 @@ static double Euler(DdsProcessor* p, DdsVariable* v)
 EXPORT(int) DdsComputeStatic(DDS_PROCESSOR ph)
 {
 	ENTER(ph);
-    if (STAGE() == DDS_COMPUTED_ALL) THROW(DDS_ERROR_COMPUTED, DDS_MSG_COMPUTED);
+    if (STAGE() == DDS_COMPUTED_ALL) return 0;
 
     int cv = VARIABLE_COUNT();
 
@@ -75,7 +75,8 @@ EXPORT(int) DdsComputeStatic(DDS_PROCESSOR ph)
         // Compute everything at the first.
         ComputeStatic(p, V_TOP_ONCET());
         ComputeStatic(p, V_TOP_EVERYT());
-        STAGE() = DDS_COMPUTED_ANY_TIME;
+        ComputeStatic(p, V_TOP_ANYT());
+        STAGE() = DDS_COMPUTED_ALL;
     } else {
         if (STAGE() == DDS_COMPUTED_EVERY_TIME) {
             ComputeStatic(p, V_TOP_EVERYT());

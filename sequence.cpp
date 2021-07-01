@@ -221,6 +221,7 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 					}
 				} else if (IS_SFLAG_OR(pv, DDS_COMPUTED_ANY_TIME)) {
 					// pv is on the <T>-<V> route
+					// <T> having <V> on upstream has been set DDS_COMPUTED_ANY_TIME, so change it to DDS_COMPUTED_EVERY_TIME.
 					block = SCORE(pv);
 					if (block > 0) {
 						for (int j = 0; j < cv; ++j) {
@@ -228,7 +229,7 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 						}
 					}
 				}
-				MOVE_BACK(pv, DDS_SFLAG_FREE);
+				MOVE_BACK(pv, 0);
 				if (INDEX(pv) < 0) POP();
 				else               PUSH(RHSV(pv, INDEX(pv)));
 			}
@@ -246,7 +247,7 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 				if (IS_SFLAG_OR(pv, DDS_FLAG_VOLATILE)) {
 					int ix = STACK_SIZE();
 					while (--ix > 0) {
-						if (IS_SFLAG_OR(STACK_ELEMENT(ix), DDS_COMPUTED_EVERY_TIME)) break;
+//						if (IS_SFLAG_OR(STACK_ELEMENT(ix), DDS_COMPUTED_EVERY_TIME)) break;
 						SET_SFLAG_ON(STACK_ELEMENT(ix), DDS_COMPUTED_EVERY_TIME);
 					}
 				}
@@ -378,6 +379,15 @@ EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 		}
 	}
 	//
+	//
+	// Restore each INDEX(<F>) and INDEX(<T>)  have it's index to Fs & Ts.
+	// See: DdsCheckRouteFT()
+	for (int i = 0; i < T_COUNT(); ++i) {
+		// reset INDEX
+		INDEX(TV(i)) = i;
+		INDEX(F_PAIRED(i)) = i;
+	}
+	// 
 	// 
 #ifdef _DEBUG
 	for (int i = 0; i < cv; ++i) {

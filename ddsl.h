@@ -8,13 +8,13 @@
 #ifndef  __DDSL_H
 #define  __DDSL_H 1
 /*
- * Platform definition:
+ * Platform definition(#define):
  *   WINDOWS or LINUX for Windows(VC) or Linux(gcc).
  *   EXPORT           for API exportation.
  *   BIT32   or BIT64 for 32-bit or 64-bit platform.
- * 
- *  Other platforms(Windows or Linux compilers) are not yet implemented.
- * 
+ *
+ *  Other platforms are not yet implemented.
+ *
  */
 #ifdef _WIN32
   #define WINDOWS
@@ -43,29 +43,29 @@ extern "C" {
 #endif
 
 /* Function pointer to compute(and return) variable's value. */
-struct PROCESSOR;
-struct VARIABLE;
-typedef double (*ComputeVal)(struct PROCESSOR* p, struct VARIABLE* v);
-typedef void   (*ErrHandler)(struct PROCESSOR* p);
+struct DdsPROCESSOR;
+struct DdsVARIABLE;
+typedef double (*ComputeVal)(struct DdsPROCESSOR* p, struct DdsVARIABLE* v);
+typedef void   (*ErrHandler)(struct DdsPROCESSOR* p);
 
 /*
  * DDSL inner structure (Direct access is not safe.)
  */
-typedef struct VARIABLE {
-	void*               UserPTR; /* just for user(DDSL never touch) */
-	char*               Name;
-	ComputeVal          Function;
-	double              Value;
-	struct VARIABLE**   Rhsvs;
-	unsigned int        UFlag;
-	unsigned int        SFlag;
-	int                 Nr;
-	struct VARIABLE*    next;
-	int                 index;
-	int                 score;
+typedef struct DdsVARIABLE {
+	void*                  UserPTR; /* just for user(DDSL never touch) */
+	char*                  Name;
+	ComputeVal             Function;
+	double                 Value;
+	struct DdsVARIABLE**   Rhsvs;
+	unsigned int           UFlag;
+	unsigned int           SFlag;
+	int                    Nr;
+	struct DdsVARIABLE*    next;
+	int                    index;
+	int                    score;
 } DdsVariable;
 
-typedef struct PROCESSOR {
+typedef struct DdsPROCESSOR {
 		void*           UserPTR; /* just for user(DDSL never touch) */
 		int             method;  /* Integration method or steady-state specification */
 		unsigned int    i_backtrack; /* DDS_FLAG_INTEGRATED if 'NOT' backtrack through <I>,0 enable to backtrach through <I>,for BW=EULER method.*/

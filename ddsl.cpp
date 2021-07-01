@@ -47,6 +47,14 @@ EXPORT(int)  DdsCompileGraph(DDS_PROCESSOR p,int method)
 	if (method == DDS_I_BW_EULER|| method == DDS_STEADY_STATE) I_BACKTRACK() = 0;
 	else                                                       I_BACKTRACK() = DDS_FLAG_INTEGRATED;
 
+	if (method != DDS_STEADY_STATE) {
+		DdsSetUserFlagOn(DdsTime(p), DDS_FLAG_VOLATILE);
+		DdsSetUserFlagOn(DdsStep(p), DDS_FLAG_VOLATILE);
+	} else {
+		DdsSetUserFlagOff(DdsTime(p), DDS_FLAG_VOLATILE);
+		DdsSetUserFlagOff(DdsStep(p), DDS_FLAG_VOLATILE);
+	}
+
 	STAGE() = 0;
 
 	_D(DdsDbgPrintF(stdout, "Before processing:", p));
@@ -242,7 +250,7 @@ static DdsVariable* AllocVariable(DdsProcessor *p,const char* name, unsigned int
 	v->Value = val;
 	v->UFlag = DdsSetUserFlagOn((DDS_VARIABLE)v, f);
 	v->Nr = nr;
-	v->Rhsvs = (VARIABLE**)((char*)v + sizeof(DdsVariable));
+	v->Rhsvs = (DdsVariable**)((char*)v + sizeof(DdsVariable));
 	v->Name = (char*)v->Rhsvs + sizeof(DdsVariable*) * (nr+ RHSV_EX());
 	strcpy(v->Name, name);
 	return v;
