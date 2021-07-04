@@ -1,5 +1,5 @@
 DLL_SOURCES=ddsl.cpp ft_check.cpp loop.cpp sieve.cpp utils.cpp sequence.cpp solver.cpp integrator.cpp
-TEST_SOURCES=test.c test1.c test2.c
+TEST_SOURCES=test.c test1.c test2.c test3.c
 HEADERS=ddsl.h ddsl_main.h debug.h utils.h
 
 lib:
