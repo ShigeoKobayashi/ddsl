@@ -7,6 +7,9 @@
  * Examples in ddsl_*.html 
  */
 
+ /* defined in test.c */
+extern void PrintSequence(DDS_PROCESSOR p);
+
 /* defined in test1.c */
 extern void TestNL2();
 extern void TestI1();
@@ -37,18 +40,20 @@ void TestNL2()
 	DdsAddVariableV(p, &x2, "x2", DDS_FLAG_SET, 2.0, NULL, 0);
 	DdsAddVariableV(p, &y, "y", DDS_FLAG_REQUIRED, 0.0, CompY, 2, x1, x2);
 	DdsCompileGraph(p, 0); /* Check relations and determine computation order. */
+	PrintSequence(p);
 	DdsComputeStatic(p);   /* Compute variable's value according to defined(by DdsCompileGraph()) order. */
 	printf("Value: y=%lf x1=%lf x2=%lf\n", DdsGetValue(y), DdsGetValue(x1), DdsGetValue(x2));
+
 	DdsSetUserFlag(x1, DDS_FLAG_REQUIRED);
 	DdsSetUserFlag(y,  DDS_FLAG_TARGETED);
 	DdsSetValue(y,0.0);
 	DdsCompileGraph(p, 0);
+	PrintSequence(p);
 	DdsComputeStatic(p);
-
 	printf("Value: y=%lf x1=%lf x2=%lf\n", DdsGetValue(y), DdsGetValue(x1), DdsGetValue(x2));
+
 	DdsDeleteProcessor(&p);
-	printf("\n\n Enter any key to close: ");
-	getchar();
+
 }
 
 static
@@ -95,14 +100,14 @@ void TestI1()
 
 	DdsSetValue(step, 0.1);
 	DdsCompileGraph(p, 0);
+	PrintSequence(p);
 	for (i = 0; i < 11; ++i) {
 		DdsComputeDynamic(p, 0);
 		printf("Dynamic:Time=%lf dydt=%lf y=%lf\n", DdsGetValue(time), DdsGetValue(dydt), DdsGetValue(y));
 	}
 	DdsCompileGraph(p, DDS_STEADY_STATE);
+	PrintSequence(p);
 	DdsComputeStatic(p);
 	printf("Steady :Time=%lf dydt=%lf y=%lf\n", DdsGetValue(time), DdsGetValue(dydt), DdsGetValue(y));
 	DdsDeleteProcessor(&p);
-	printf("\n\n Enter any key to close: ");
-	getchar();
 }

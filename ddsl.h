@@ -52,17 +52,17 @@ typedef void   (*ErrHandler)(struct DdsPROCESSOR* p);
  * DDSL inner structure (Direct access is not safe.)
  */
 typedef struct DdsVARIABLE {
-	void*                  UserPTR; /* just for user(DDSL never touch) */
-	char*                  Name;
-	ComputeVal             Function;
-	double                 Value;
-	struct DdsVARIABLE**   Rhsvs;
-	unsigned int           UFlag;
-	unsigned int           SFlag;
-	int                    Nr;
-	struct DdsVARIABLE*    next;
-	int                    index;
-	int                    score;
+	void*                  UserPTR;  /* just for user(DDSL never touch) */
+	char*                  Name;     /* Variable's name */
+	ComputeVal             Function; /* The function pointer to compute the value. */
+	double                 Value;    /* Variable's value */
+	struct DdsVARIABLE**   Rhsvs;    /* Array of RHSVs */
+	int                    Nr;       /* Number of RHSVs,the size of Rhsvs[] */
+	unsigned int           UFlag;    /* User flag */
+	unsigned int           SFlag;    /* System flag */
+	struct DdsVARIABLE*    next;     /* Pointer to the next variable(depends on the processing) */
+	int                    index;    /* Mainly,the counter of RHSVs(depends on the processing) */
+	int                    score;    /* Score of the variable(depends on the processing) */
 } DdsVariable;
 
 typedef struct DdsPROCESSOR {
@@ -78,8 +78,8 @@ typedef struct DdsPROCESSOR {
 		int             rhsv_extra; /* extra space for each variable. */
 
 		/* Built-in variables. */
-		DdsVariable*    Time;  /* Time */
-		DdsVariable*    Step;  /* Step */
+		DdsVariable*    Time;  /* Builtin variable,Time */
+		DdsVariable*    Step;  /* Builtin variable,Step */
 
 		/* Arrays dynamically allocated during the processing. */
 		/* Allocated and changed by DdsCheckRouteFT() */
@@ -123,11 +123,11 @@ typedef struct DdsPROCESSOR {
 		int             current_block; /* Current block computed (0-base,for debugging) */
 
 		/* Error informations(only valid in case of an error,see utils.h) */
-		const char*     Msg;
-		const char*     File;
-		int             Line;
-		int             Code;
-		ErrHandler      ErrorHandler;
+		const char*     Msg;   /* Error message */
+		const char*     File;  /* File path the error found */
+		int             Line;  /* Line number the error found */
+		int             Code;  /* Error code */
+		ErrHandler      ErrorHandler; /* Error handler the user should prepair */
 } DdsProcessor;
 
 /*
@@ -214,16 +214,18 @@ typedef DdsVariable*  DDS_VARIABLE;   /* Variable handle  */
 #define DDS_ERROR_SYSTEM        -999 /* Undefined c/c++ level error. */
 #define DDS_MSG_SYSTEM          "Undefined c/c++ level error."
 
-EXPORT(ErrHandler)    DdsGetErrorHandler(DDS_PROCESSOR p);
-EXPORT(void)          DdsSetErrorHandler(DDS_PROCESSOR p, ErrHandler handler);
-
+/* in solver.cpp */
+EXPORT(int)           DdsComputeStatic(DDS_PROCESSOR ph);
+/* in integrator.cpp */
+EXPORT(int)           DdsComputeDynamic(DDS_PROCESSOR ph, int method);
+/* in ddsl.cpp */
 EXPORT(int)           DdsCreateProcessor(DDS_PROCESSOR* p, int nv);
 EXPORT(void)          DdsDeleteProcessor(DDS_PROCESSOR* p);
 EXPORT(int)           DdsAddVariableV(DDS_PROCESSOR p,DDS_VARIABLE *pv,const char *name,unsigned int f,double val, ComputeVal func,int nr,...);
 EXPORT(int)           DdsAddVariableA(DDS_PROCESSOR p, DDS_VARIABLE* pv, const char* name, unsigned int f, double val, ComputeVal func, int nr, DDS_VARIABLE* rhsvs);
 EXPORT(int)           DdsCompileGraph(DDS_PROCESSOR p,int method);
-EXPORT(int)           DdsComputeStatic(DDS_PROCESSOR ph);
-EXPORT(int)           DdsComputeDynamic(DDS_PROCESSOR ph,int method);
+EXPORT(ErrHandler)    DdsGetErrorHandler(DDS_PROCESSOR p);
+EXPORT(void)          DdsSetErrorHandler(DDS_PROCESSOR p, ErrHandler handler);
 EXPORT(DDS_VARIABLE)  DdsGetVariableSequence(DDS_PROCESSOR ph, unsigned int seq);
 EXPORT(DDS_VARIABLE)  DdsTime(DDS_PROCESSOR ph);
 EXPORT(DDS_VARIABLE)  DdsStep(DDS_PROCESSOR ph);
@@ -234,7 +236,6 @@ EXPORT(int)           DdsSetMaxIterations(DDS_PROCESSOR ph, int max);
 EXPORT(void*)         DdsGetProcessorUserPTR(DDS_PROCESSOR ph);
 EXPORT(void)          DdsSetProcessorUserPTR(DDS_PROCESSOR ph,void* val);
 EXPORT(DDS_VARIABLE*) DdsGetVariables(int* nv, DDS_PROCESSOR p);
-
 EXPORT(void*)         DdsGetVariableUserPTR(DDS_VARIABLE v);
 EXPORT(void)          DdsSetVariableUserPTR(DDS_VARIABLE v, void* val);
 EXPORT(double)        DdsGetValue(DDS_VARIABLE v);
@@ -247,19 +248,17 @@ EXPORT(const char *)  DdsGetVariableName(DDS_VARIABLE hv);
 EXPORT(DDS_VARIABLE)  DdsGetVariableNext(DDS_VARIABLE hv);
 EXPORT(int)           DdsGetVariableIndex(DDS_VARIABLE hv);
 EXPORT(int)           DdsGetVariableScore(DDS_VARIABLE hv);
-
 EXPORT(unsigned int)  DdsGetUserFlag(DDS_VARIABLE hv);
 EXPORT(unsigned int)  DdsSetUserFlag(DDS_VARIABLE hv, unsigned int f);
 EXPORT(unsigned int)  DdsGetSystemFlag(DDS_VARIABLE hv);
 EXPORT(unsigned int)  DdsSetUserFlagOn(DDS_VARIABLE hv, unsigned int f);
 EXPORT(unsigned int)  DdsSetUserFlagOff(DDS_VARIABLE hv, unsigned int f);
-
-
 EXPORT(void)          DdsDbgPrintF(FILE* f, const char* title, DDS_PROCESSOR p);
 EXPORT(int)           DdsSieveVariable(DDS_PROCESSOR ph);
 EXPORT(int)           DdsDivideLoop(DDS_PROCESSOR ph);
 EXPORT(int)           DdsCheckRouteFT(DDS_PROCESSOR ph);
 EXPORT(int)           DdsBuildSequence(DDS_PROCESSOR ph);
+EXPORT(void)          DdsFreeWorkMemory(DDS_PROCESSOR ph);
 
 #if defined(__cplusplus)
 }  /* extern "C" { */

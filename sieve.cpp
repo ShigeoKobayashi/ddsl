@@ -46,6 +46,7 @@ EXPORT(int) DdsSieveVariable(DDS_PROCESSOR ph)
 		MemFree(p,(void**)&(pv));
 	}
 	DdsFreeWorkMemory(ph);
+	cv = VARIABLE_COUNT();
 
 	STAGE() = 0;
 
@@ -55,7 +56,9 @@ EXPORT(int) DdsSieveVariable(DDS_PROCESSOR ph)
 		int ce = 0;
 		for (int i = 0; i < cv; ++i) {
 			SYS_FLAG(VARIABLE(i)) = USER_FLAG(VARIABLE(i)) & DDS_FLAG_MASK;
-			if(DdsCheckVariable(ph,VARIABLE(i))) ++ce;
+			if (DdsCheckVariable(ph, VARIABLE(i))) {
+				++ce;
+			}
 		}
 		if (ce > 0) THROW(DDS_ERROR_FLAG, DDS_MSG_FLAG);
 	}

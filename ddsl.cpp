@@ -6,13 +6,8 @@
  *
  */
 
-/* References:
-  Masao Iri, Junkichi Tsunekawa, Keiji Yajima:The Graphical Techniques Used for a Chemical Process Simulator "JUSE GIFS". IFIP Congress
-  Dr. Kazuo Murota (auth.):Systems Analysis by Graphs and Matroids: Structural Solvability and Controllability
-(https://jp1lib.org/book/2264352/362f6b?id=2264352&secret=362f6b)
- K.Yajima, J.Tsunekawa and S.Kobayashi(1981) : On equation - based dynamic simulation.Proc. Proceedings. 2nd World Congress of Chemical Engineering, 1981 Montreal, 1981
- K.Yajima, J.Tsunekawa, H.Shono, S.Kobayashi and D.J.Sebastian (1982) : On graph - theoretic techniques for large - scale process systems.
- The International symposium on process systems engineering,Kyoto International Conference Hall, Kyoto Japan, August 23-27, 1982
+/*
+  Main interface source. Most APIs descrived here.
 */
 
 #include <stdio.h>
@@ -24,18 +19,92 @@
 #include "utils.h"
 #include "debug.h"
 
-//
-// Error handler ... see utils.h
-//
-EXPORT(ErrHandler)    DdsGetErrorHandler(DDS_PROCESSOR p)
+static void         AddVariable(DdsProcessor* p, DdsVariable* pv);
+static DdsVariable* AllocVariable(DdsProcessor* p, const char* name, unsigned int f, double val, ComputeVal func, int nr);
+#ifdef _DEBUG
+extern void         PrintAllocCount(const char* msg);
+#endif
+
+EXPORT(int)  DdsCreateProcessor(DDS_PROCESSOR* p, int nv)
 {
-	return p->ErrorHandler;
-}
-EXPORT(void)          DdsSetErrorHandler(DDS_PROCESSOR p, ErrHandler handler)
-{
-	p->ErrorHandler = handler;
+	try {
+		if (nv <= 0) nv = 10;
+		DdsProcessor* pr = (DdsProcessor*)MemAlloc(nullptr, sizeof(DdsProcessor));
+		pr->Vars = (DdsVariable**)MemAlloc(pr, sizeof(DdsVariable*) * nv);
+		pr->v_count = 0;
+		pr->v_max = nv;
+		*p = (DDS_PROCESSOR)pr;
+		// Add TIME and STEP
+		DdsAddVariableV(pr, &pr->Time, "#TIME", DDS_FLAG_SET | DDS_FLAG_VOLATILE, 0.0, nullptr, 0);
+		DdsAddVariableV(pr, &pr->Step, "#STEP", DDS_FLAG_SET | DDS_FLAG_VOLATILE, 0.0, nullptr, 0);
+	}
+	catch (Exception& ex) {
+		return ex.Code;
+	}
+	catch (...) {
+		TRACE_EX(("DdsCreateProcessor() aborted"));
+		return DDS_ERROR_SYSTEM;
+	}
+	return 0;
 }
 
+EXPORT(void) DdsDeleteProcessor(DDS_PROCESSOR* ph)
+{
+	if (ph == nullptr) return;
+	DdsProcessor* p = (DdsProcessor*)(*ph);
+	for (int i = 0; i < VARIABLE_COUNT(); ++i) MemFree(p, (void**)&(VARIABLE(i)));
+	MemFree(p, (void**)&(VARIABLEs()));
+
+	DdsFreeWorkMemory(*ph);
+
+	// Finally delete processor!
+	MemFree(p, (void**)&(p));
+	*ph = nullptr;
+	_D(PrintAllocCount("DdsDeleteProcessor()"));
+}
+
+EXPORT(int)  DdsAddVariableA(DDS_PROCESSOR p, DDS_VARIABLE* pv, const char* name, unsigned int f, double val, ComputeVal func, int nr, DDS_VARIABLE* rhsvs)
+{
+	try {
+		DDS_VARIABLE v = AllocVariable(p, name, f, val, func, nr);
+		for (int i = 0; i < nr; ++i) {
+			v->Rhsvs[i] = (DDS_VARIABLE)rhsvs[i];
+		}
+		*pv = v;
+		AddVariable((DdsProcessor*)p, v);
+	}
+	catch (Exception& ex) {
+		return ex.Code;
+	}
+	catch (...) {
+		TRACE_EX(("DdsAddVariableA() aborted"));
+		return DDS_ERROR_SYSTEM;
+	}
+	return 0;
+}
+
+EXPORT(int)  DdsAddVariableV(DDS_PROCESSOR p, DDS_VARIABLE* pv, const char* name, unsigned int f, double val, ComputeVal func, int nr, ...)
+{
+	try {
+		DdsVariable* v = AllocVariable(p, name, f, val, func, nr);
+		va_list args;
+		va_start(args, nr);
+		for (int i = 0; i < nr; ++i) {
+			v->Rhsvs[i] = va_arg(args, DdsVariable*);
+		}
+		va_end(args);
+		*pv = v;
+		AddVariable((DdsProcessor*)p, v);
+	}
+	catch (Exception& ex) {
+		return ex.Code;
+	}
+	catch (...) {
+		TRACE_EX(("DdsAddVariableV() aborted"));
+		return DDS_ERROR_SYSTEM;
+	}
+	return 0;
+}
 
 EXPORT(int)  DdsCompileGraph(DDS_PROCESSOR p,int method)
 {
@@ -71,33 +140,6 @@ EXPORT(int)  DdsCompileGraph(DDS_PROCESSOR p,int method)
 	_D(DdsDbgPrintF(stdout, "After DdsBuildSequence(p)", p));
 	if (e) return e;
 	return e;
-}
-
-#ifdef _DEBUG
-extern void PrintAllocCount(const char *msg);
-#endif
-
-EXPORT(int)  DdsCreateProcessor(DDS_PROCESSOR* p, int nv)
-{
-	try {
-		if (nv <= 0) nv = 10;
-		DdsProcessor* pr = (DdsProcessor*)MemAlloc(nullptr,sizeof(DdsProcessor));
-		pr->Vars = (DdsVariable**)MemAlloc(pr,sizeof(DdsVariable*) * nv);
-		pr->v_count = 0;
-		pr->v_max   = nv;
-		*p = (DDS_PROCESSOR)pr;
-		// Add TIME and STEP
-		DdsAddVariableV(pr, &pr->Time, "#TIME", DDS_FLAG_SET | DDS_FLAG_VOLATILE, 0.0, nullptr, 0);
-		DdsAddVariableV(pr, &pr->Step, "#STEP", DDS_FLAG_SET | DDS_FLAG_VOLATILE, 0.0, nullptr, 0);
-	}
-	catch (Exception &ex) {
-		return ex.Code;
-	}
-	catch (...) {
-		TRACE_EX(("DdsCreateProcessor() aborted"));
-		return DDS_ERROR_SYSTEM;
-	}
-	return 0;
 }
 
 EXPORT(DDS_VARIABLE)  DdsTime(DDS_PROCESSOR ph)
@@ -177,31 +219,17 @@ EXPORT(void) DdsFreeWorkMemory(DDS_PROCESSOR ph)
 	if (SCALE() != nullptr)        MemFree(p,(void**)&(SCALE()));
 	if (PIVOT() != nullptr)        MemFree(p,(void**)&(PIVOT()));
 	// RUNGE-KUTTA working arrays.
-	if (p->R_K1  != nullptr)        MemFree(p,(void**)&(p->R_K1));
-	if (p->R_K2  != nullptr)        MemFree(p,(void**)&(p->R_K2));
-	if (p->R_K3  != nullptr)        MemFree(p,(void**)&(p->R_K3));
-	if (p->R_K4  != nullptr)        MemFree(p,(void**)&(p->R_K4));
-	if (p->R_IVS != nullptr)        MemFree(p,(void**)&(p->R_IVS));
+	if (p->R_K1  != nullptr)       MemFree(p,(void**)&(p->R_K1));
+	if (p->R_K2  != nullptr)       MemFree(p,(void**)&(p->R_K2));
+	if (p->R_K3  != nullptr)       MemFree(p,(void**)&(p->R_K3));
+	if (p->R_K4  != nullptr)       MemFree(p,(void**)&(p->R_K4));
+	if (p->R_IVS != nullptr)       MemFree(p,(void**)&(p->R_IVS));
 
 	T_COUNT() = 0;
 	B_COUNT() = 0;
 	I_COUNT() = 0;
 }
 
-EXPORT(void) DdsDeleteProcessor(DDS_PROCESSOR* ph)
-{
-	if (ph == nullptr) return;
-	DdsProcessor* p = (DdsProcessor*)(*ph);
-	for(int i=0;i<VARIABLE_COUNT();++i) MemFree(p,(void**)&(VARIABLE(i)));
-	MemFree(p,(void**)&(VARIABLEs()));
-	
-	DdsFreeWorkMemory(*ph);
-
-	// Finally delete processor!
-	MemFree(p,(void**)&(p));
-	*ph = nullptr;
-	_D(PrintAllocCount("DdsDeleteProcessor()"));
-}
 
 EXPORT(const char*)  DdsGetVariableName(DDS_VARIABLE v)
 {
@@ -233,7 +261,6 @@ EXPORT(DDS_VARIABLE*) DdsGetRhsvs(int* nr, DDS_VARIABLE v)
 	return (DDS_VARIABLE*)(RHSVs(p));
 }
 
-
 static void AddVariable(DdsProcessor* p, DdsVariable* pv)
 {
 	if (p->v_count >= p->v_max) {
@@ -254,49 +281,6 @@ static DdsVariable* AllocVariable(DdsProcessor *p,const char* name, unsigned int
 	v->Name = (char*)v->Rhsvs + sizeof(DdsVariable*) * (nr+ RHSV_EX());
 	strcpy(v->Name, name);
 	return v;
-}
-
-EXPORT(int)  DdsAddVariableA(DDS_PROCESSOR p, DDS_VARIABLE* pv, const char* name, unsigned int f, double val, ComputeVal func, int nr, DDS_VARIABLE* rhsvs)
-{
-	try {
-		DDS_VARIABLE v = AllocVariable(p,name, f, val, func, nr);
-		for (int i = 0; i < nr; ++i) {
-			v->Rhsvs[i] = (DDS_VARIABLE)rhsvs[i];
-		}
-		*pv = v;
-		AddVariable((DdsProcessor*)p, v);
-	}
-	catch (Exception& ex) {
-		return ex.Code;
-	}
-	catch (...) {
-		TRACE_EX(("DdsAddVariableA() aborted"));
-		return DDS_ERROR_SYSTEM;
-	}
-	return 0;
-}
-
-EXPORT(int)  DdsAddVariableV(DDS_PROCESSOR p, DDS_VARIABLE* pv, const char* name, unsigned int f, double val, ComputeVal func, int nr, ...)
-{
-	try {
-		DdsVariable* v = AllocVariable(p,name,  f, val, func, nr);
-		va_list args;
-		va_start(args, nr);
-		for (int i = 0; i < nr; ++i) {
-			v->Rhsvs[i] = va_arg(args, DdsVariable*);
-		}
-		va_end(args);
-		*pv = v;
-		AddVariable((DdsProcessor*)p, v);
-	}
-	catch (Exception& ex) {
-		return ex.Code;
-	}
-	catch (...) {
-		TRACE_EX(("DdsAddVariableV() aborted"));
-		return DDS_ERROR_SYSTEM;
-	}
-	return 0;
 }
 
 EXPORT(void) DdsDbgPrintF(FILE* f, const char* title, DDS_PROCESSOR p)
@@ -480,4 +464,16 @@ EXPORT(DDS_VARIABLE)  DdsGetVariableSequence(DDS_PROCESSOR ph, unsigned int seq)
 		ASSERT(false);
 	}
 	return nullptr;
+}
+
+//
+// Error handler ... see utils.h
+//
+EXPORT(ErrHandler)    DdsGetErrorHandler(DDS_PROCESSOR p)
+{
+	return p->ErrorHandler;
+}
+EXPORT(void)          DdsSetErrorHandler(DDS_PROCESSOR p, ErrHandler handler)
+{
+	p->ErrorHandler = handler;
 }

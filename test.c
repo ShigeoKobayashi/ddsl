@@ -1,5 +1,6 @@
 ﻿#include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <math.h>
 #include "ddsl.h"
 
@@ -10,12 +11,47 @@ extern void Test1();
 
 /* defined in test2.c */
 extern void Test2();
+/* defined in test3.c */
+extern void Test3();
 
-
-void main()
+int main(void)
 {
-	/*
-	Test1();
-	*/
-	Test2();
+	int c;
+	do {
+		printf("\nEnter test number or 'q'/'e':");
+		do {c = getchar();} while (isspace(c));
+		switch (c)
+		{
+		case '1': Test1(); break;
+		case '2': Test2(); break;
+		case '3': Test3(); break;
+		default:break;
+		}
+	} while (c != 'e' && c != 'E' && c != 'q' && c != 'Q');
+	return 0;
+}
+
+void PrintSequence(DDS_PROCESSOR p)
+{
+	DDS_VARIABLE v = DdsGetVariableSequence(p, DDS_COMPUTED_ONCE);
+	if (v != NULL) printf("\nDDS_COMPUTED_ONCE sequence:\n ");
+	while (v != NULL) {
+		printf("%s ", DdsGetVariableName(v));
+		v = DdsGetVariableNext(v);
+	}
+	printf("\n");
+	v = DdsGetVariableSequence(p, DDS_COMPUTED_EVERY_TIME);
+	if (v != NULL) printf("\nDDS_COMPUTED_EVERY_TIME sequence:\n ");
+	while (v != NULL) {
+		printf("%s ", DdsGetVariableName(v));
+		v = DdsGetVariableNext(v);
+	}
+	printf("\n");
+	v = DdsGetVariableSequence(p, DDS_COMPUTED_ANY_TIME);
+	if (v != NULL) printf("\nDDS_COMPUTED_ANY_TIME sequence:\n ");
+	while (v != NULL) {
+		printf("%s ", DdsGetVariableName(v));
+		v = DdsGetVariableNext(v);
+	}
+	printf("\n");
 }

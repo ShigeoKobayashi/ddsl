@@ -3,6 +3,10 @@
 #include <math.h>
 #include "ddsl.h"
 
+/* defined in test.c */
+extern void PrintSequence(DDS_PROCESSOR p);
+
+
 DDS_VARIABLE time, step, I,IN, dIdT;
 
 typedef struct {
@@ -144,6 +148,7 @@ void Test2()
 	u.y = Y;
 	DdsSetProcessorUserPTR(p, (void*)&u);
 	DdsCompileGraph(p, DDS_I_EULER);
+	PrintSequence(p);
 	DdsSetValue(step, 0.1);
 	DdsComputeStatic(p);
 	
@@ -156,12 +161,9 @@ void Test2()
 	}
 
 	DdsCompileGraph(p, DDS_STEADY_STATE);
+	PrintSequence(p);
 	DdsComputeStatic(p);
 	DdsDbgPrintF(stdout, "After DdsComputeStatic(DDS_STEADY_STATE)", p);
 
-
-
 	DdsDeleteProcessor(&p);
-	printf("\n\n Enter any key to close: ");
-	getchar();
 }
