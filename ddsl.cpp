@@ -3,6 +3,7 @@
  * DDSL: Digital Dynamic Simulation Library (C/C++ Library).
  *
  * Copyright(C) 2021 by Shigeo Kobayashi(shigeo@tinyforest.jp).
+ *                                              V1.0(2021/7/4)
  *
  */
 
