@@ -51,6 +51,8 @@ typedef void   (*ErrHandler)(struct DdsPROCESSOR* p);
 /*
  * DDSL inner structure (Direct access is not safe.)
  */
+
+/* Vriable definition */
 typedef struct DdsVARIABLE {
 	void*                  UserPTR;  /* just for user(DDSL never touch) */
 	char*                  Name;     /* Variable's name */
@@ -65,11 +67,21 @@ typedef struct DdsVARIABLE {
 	int                    score;    /* Score of the variable(depends on the processing) */
 } DdsVariable;
 
+/* API status & error informations */
+typedef struct {
+	int             Status;  /* status of API function call */
+
+	/* Error informations(only valid in case of an error,see utils.h) */
+	const char*     Msg;     /* Error message */
+	const char*     File;    /* File path the error found */
+	int             Line;    /* Line number the error found */
+} DDS_STATUS;
+
+/* Processor definition */
 typedef struct DdsPROCESSOR {
 		void*           UserPTR; /* just for user(DDSL never touch) */
 		int             method;  /* Integration method or steady-state specification */
 		unsigned int    i_backtrack; /* DDS_FLAG_INTEGRATED if 'NOT' backtrack through <I>,0 enable to backtrach through <I>,for BW=EULER method.*/
-		int             status;  /* status of function call */
 
 		/* changed at DdsAddVariableV/A() stage */
 		DdsVariable**   Vars;    /* Variables registered  */
@@ -122,11 +134,8 @@ typedef struct DdsPROCESSOR {
 		int             max_iter;   /* maximum iteration count in Newton method */
 		int             current_block; /* Current block computed (0-base,for debugging) */
 
-		/* Error informations(only valid in case of an error,see utils.h) */
-		const char*     Msg;   /* Error message */
-		const char*     File;  /* File path the error found */
-		int             Line;  /* Line number the error found */
-		int             Code;  /* Error code */
+		/* Exit or Error handling. */
+		DDS_STATUS      ExitStatus; /* Exit or Error status of each function call. */
 		ErrHandler      ErrorHandler; /* Error handler the user should prepair */
 } DdsProcessor;
 
@@ -219,6 +228,7 @@ EXPORT(int)           DdsComputeStatic(DDS_PROCESSOR ph);
 /* in integrator.cpp */
 EXPORT(int)           DdsComputeDynamic(DDS_PROCESSOR ph, int method);
 /* in ddsl.cpp */
+EXPORT(DDS_STATUS*)   DdsGetExitStatus(DDS_PROCESSOR p);
 EXPORT(int)           DdsCreateProcessor(DDS_PROCESSOR* p, int nv);
 EXPORT(void)          DdsDeleteProcessor(DDS_PROCESSOR* p);
 EXPORT(int)           DdsAddVariableV(DDS_PROCESSOR p,DDS_VARIABLE *pv,const char *name,unsigned int f,double val, ComputeVal func,int nr,...);

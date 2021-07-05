@@ -22,7 +22,7 @@
 #define VARIABLE_COUNT()    ((p)->v_count)    // number of the total variables registered.
 #define VARIABLEs()         ((p)->Vars)       // array of the registered variables registered.
 #define VARIABLE(i)         (VARIABLEs()[i])  // i-th variable registered.
-#define STATUS()            ((p)->status)     // final status of eache function call.
+#define STATUS()            ((p->ExitStatus).Status)     // final status of eache function call.
 #define JACOBIAN_MATRIX()   ((p)->jacobian)   // Jacobian matrix for solving system of non-linear equations.
 #define SCALE()             ((p)->scale)      // an array for scaling value used in LU decomposition
 #define PIVOT()             ((p)->pivot)      // for pivoting 

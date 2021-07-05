@@ -20,10 +20,10 @@ public:
 	{
 		Code = code;
 		if (p != nullptr) {
-			p->Code = code;
-			p->Msg = msg;
-			p->File = file;
-			p->Line = line;
+			(p->ExitStatus).Status = code;
+			(p->ExitStatus).Msg = msg;
+			(p->ExitStatus).File;
+			(p->ExitStatus).Line;
 			if (p->ErrorHandler != nullptr) (*p->ErrorHandler)(p);
 		}
 		TRACE(("\n** Exception(%d,%s) in %s at %d\n",code,msg,file,line));

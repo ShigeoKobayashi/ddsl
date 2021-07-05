@@ -497,6 +497,8 @@ If the user wants to know the value of &lt;AT&gt; variable,user must call <a hre
 <a href="#DdsTime">DdsTime</a><br/>
 <a href="#DdsStep">DdsStep</a><br/>
 <a href="#DdsGetVariableSequence">DdsGetVariableSequence</a><br/>
+
+<a href="#DdsGetExitStatus">DdsGetExitStatus</a><br/>
 <a href="#DdsSetErrorHandler">DdsSetErrorHandler</a><br/>
 <a href="#DdsGetErrorHandler">DdsGetErrorHandler</a><br/>
 
@@ -801,6 +803,16 @@ The argument seq must be the one listed above.:
      v = DdsGetVariableNext(v);
   }
 </code></pre> 
+
+<a name="DdsGetExitStatus" />
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>DDS_STATUS*</td><td>DdsGetExitStatus(DDS_PROCESSOR p)</td></tr>
+</table>
+DdsGetExitStatus() returns exit status of the API function call just called before.
+About DDS_STATUS,see ddsl.h.
+<p/>
+
 
 <a name="DdsGetErrorHandler" />
 <table width="100%" border="1">

@@ -510,6 +510,8 @@ DDSL は右辺変数（RHSV）を持たず&lt;S&gt;でもない変数を見つ�
 <a href="#DdsTime">DdsTime</a><br/>
 <a href="#DdsStep">DdsStep</a><br/>
 <a href="#DdsGetVariableSequence">DdsGetVariableSequence</a><br/>
+<a href="#DdsGetExitStatus">DdsGetExitStatus</a><br/>
+
 <a href="#DdsSetErrorHandler">DdsSetErrorHandler</a><br/>
 <a href="#DdsGetErrorHandler">DdsGetErrorHandler</a><br/>
 </td><td>
@@ -653,6 +655,15 @@ DDS_I_EULER または DDS_I_RUNGE_KUTTA は、 <a href="#DdsCompileGraph">DdsCom
 <b>※:</b> <a href="#DdsTime">時間(t)</a> は自動的に <a href="#DdsStep">時間刻み</a> （予め設定されている必要があります）分更新されます。
 <br/>
 <b>※: 戻り値 0 は正常終了。ゼロ以外はエラーコード</b>。　各エラーコードの値は ddsl.h を参照。
+<p/>
+
+<a name="DdsGetExitStatus" />
+<table width="100%" border="1">
+<col width="10%">
+<tr><td>DDS_STATUS*</td><td>DdsGetExitStatus(DDS_PROCESSOR p)</td></tr>
+</table>
+DdsGetExitStatus() は直前の関数呼び出しの終了状況（status）を返します。
+DDS_STATUS の内容は ddsl.h 参照。
 <p/>
 
 <a name="DdsGetErrorHandler" />

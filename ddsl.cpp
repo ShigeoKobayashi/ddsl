@@ -26,6 +26,12 @@ static DdsVariable* AllocVariable(DdsProcessor* p, const char* name, unsigned in
 extern void         PrintAllocCount(const char* msg);
 #endif
 
+EXPORT(DDS_STATUS*)  DdsGetExitStatus(DDS_PROCESSOR p)
+{
+	return &(p->ExitStatus);
+}
+
+
 EXPORT(int)  DdsCreateProcessor(DDS_PROCESSOR* p, int nv)
 {
 	try {

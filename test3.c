@@ -5,7 +5,7 @@
 #include "ddsl.h"
 
 /* defined in test.c */
-extern void PrintSequence(DDS_PROCESSOR p);
+extern void PrintInfo(DDS_PROCESSOR p);
 
 static DDS_PROCESSOR p;
 static DDS_VARIABLE I, dIdT, time, step, F1, M1, T1, F2, M2, T2, F3, M3, T3, R;
@@ -78,7 +78,7 @@ void Test3()
 	DdsSetValue(step, 0.1);
 
 	DdsCompileGraph(p, 0);
-	PrintSequence(p);
+	PrintInfo(p);
 	for (i = 0; i < 10; ++i) {
 		DdsComputeDynamic(p, 0);
 		printf("T:%lf dIdT:%lf I:%lf R:%lf F1:%lf F2:%lf F3:%lf\n",
@@ -92,7 +92,7 @@ void Test3()
 		);
 	}
 	DdsCompileGraph(p, DDS_STEADY_STATE);
-	PrintSequence(p);
+	PrintInfo(p);
 	DdsComputeStatic(p);
 	printf("Steady state:\n");
 	printf("T:%lf dIdT:%lf I:%lf R:%lf F1:%lf F2:%lf F3:%lf\n",
