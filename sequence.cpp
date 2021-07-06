@@ -25,6 +25,18 @@
 //   finally,
 //        V_TOP_EVERYT() to V_END_EVERYT() at anytime(is not computed at every integration steps,but is time dependent).
 //
+//   Following informations are defined in DdsCheckRouteFT(), see ft_check.cpp.
+//   And must be preserved after this function call.
+//   
+//      TV(i) and F_PIRED(i) are sorted in computation(block) order.
+//      INDEX(<T>),INDEX(<F>) point the array index i of TV(i) and F_PAIRED(i).
+//      SCORE(<T>),SCORE(<F>) have block number(=block index+1) that belong to.
+//      SCORE(<X>),<X> is any variable other than <F> or <T>,is -1 if <X> is not on any
+//                 <F>-<T> block. 
+//                 The value other than -1 means the variable is on the block of <T>(SCORE(<X>)==SCORE(<T>)).
+//      B_COUNT() ... total number of blocks.
+//      B_SIZE(i) ... the size of i-th block.
+//
 EXPORT(int) DdsBuildSequence(DDS_PROCESSOR ph)
 {
 	ENTER(ph);

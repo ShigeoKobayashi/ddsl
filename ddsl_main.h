@@ -70,7 +70,9 @@
 #define V_END_EVERYT()      ((p)->VEndEveryT)
 #define STAGE()             ((p)->stage)
 
+//
 // For DdsVariable
+//  Flag manupilation
 #define USER_FLAG(v)        ((v)->UFlag)
 #define SYS_FLAG(v)         ((v)->SFlag)
 #define SET_SFLAG_ON(v,f)   ((v)->SFlag |= (f));
@@ -80,10 +82,14 @@
 
 #define CLEAR_PROC_FLAG(v)  (SYS_FLAG(v) &= ~DDS_PROC_MASK)
 
+//
+// Worcking elements
+//  Each variable has following 3 elements of which usages depend on the API used.
+//    
+#define SCORE(v)      ((v)->score)  // Connected component no.,block no. etc
+#define INDEX(v)      ((v)->index)  // Mainly used for back-tracking. Before computation,see ft_check.cpp.
+#define NEXT(v)       ((v)->next)   // Circular link, link of computation order finally.
 #define NAME(v)       ((v)->Name)
-#define SCORE(v)      ((v)->score)
-#define NEXT(v)       ((v)->next)
-#define INDEX(v)      ((v)->index)
 #define RHSV_COUNT(v) (IS_SFLAG_OR((v),DDS_FLAG_SET|DDS_SFLAG_FREE)?0:(v)->Nr)
 #define RHSVs(v)      ((v)->Rhsvs)
 #define RHSV(v,i)     (RHSVs(v)[i])

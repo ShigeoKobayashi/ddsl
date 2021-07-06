@@ -15,9 +15,6 @@
 #include "utils.h"
 #include "debug.h"
 
-// in ddsl.cpp
-EXPORT(void)          DdsFreeWorkMemory(DDS_PROCESSOR ph);
-
 //
 // Select <AL>ive variables that have contribution to compute any <R>,and define connected components.
 // Also checks number of <F>s==<T>s.
@@ -25,7 +22,7 @@ EXPORT(void)          DdsFreeWorkMemory(DDS_PROCESSOR ph);
 // On return:
 //   DDS_SFLAG_ERROR on any variable means which has contradicted user-flags and conputation can't continue.
 //   If it is not set on any variable,then
-//     SCORE(v)   ... Connected component no.,the v icluded. SCORE(v)==0 means v is not alive.
+//     SCORE(v)   ... Connected component no.,the v belongs to. SCORE(v)==0 means v is not alive.
 //     NEXT(v)    ... Circular link that links every variables in the same connected component.
 //
 EXPORT(int) DdsSieveVariable(DDS_PROCESSOR ph)
