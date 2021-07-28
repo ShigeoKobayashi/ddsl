@@ -354,10 +354,10 @@ If y is divided into y1(=<a href="#FREE">&lt;F&gt;</a>) and y2(=<a href="#TARGET
 will be added and be solved.<br/>
 y1 is &lt;F&gt; and y2 is &lt;T&gt;.also both y1 and y2 are <a href="#DIVIDED">&lt;DD&gt;</a> at the same time.<p/>
 DDSL automatically detects loops and performs above procedures.<br/>
-Any variable on a loop can be divided. The user can specify this &lt;D&gt;(DDS_FLAG_DIVISIBLE) flag on any variable(by reason of easy estimation of initial value, etc.) to be divided. DDSL tries to divide &lt;D&gt; varable,but it is not alway divided.
+Any variable on a loop can be divided. The user can specify this &lt;D&gt;(DDS_FLAG_DIVISIBLE) flag on any variable(by reason of easy estimation of initial value, etc.) to be divided. DDSL tries to divide &lt;D&gt; varable,but it is not always divided.
 DDSL finds loops and tries to divide the variable which is located on more loops.
 The variable actually divided will have the system flag <a href="#DIVIDED">DDS_SFLAG_DIVIDED(&lt;DD&gt;)</a>.<p/>
-<b>Note:</b> &lt;D&gt; variable is not alway divided.<br/>
+<b>Note:</b> &lt;D&gt; variable is not always divided.<br/>
 <b>Note:</b> The y1 is the same as y,and newly created variable y2 has the name of y+'+'.
 </td></tr>
 </table>
@@ -368,7 +368,7 @@ The variable actually divided will have the system flag <a href="#DIVIDED">DDS_S
 <tr><td><b>DDS_FLAG_NON_DIVISIBLE (&lt;N&gt;)</b></td><td>0x00000040</td></tr>
 </table>
 This flag is set on the variable which the user do not want to be divided.
-DDSL tries not to divide the variable of this flag,but it is not alway true due to <a href="#DIVISIBLE">above reason</a>.<p/>
+DDSL tries not to divide the variable of this flag,but it is not always true due to <a href="#DIVISIBLE">above reason</a>.<p/>
 
 <a name="INTEGRATED"/>
 <table border="1" width="100%">
